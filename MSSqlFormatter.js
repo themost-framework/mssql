@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://themost.io/license
  */
 const util = require('util');
-const { QueryField, QueryField, SqlUtils } = require('@themost/query');
+const { QueryField, QueryUtils, SqlUtils, SqlFormatter } = require('@themost/query');
 
 function zeroPad(number, length) {
     number = number || 0;

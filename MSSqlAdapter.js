@@ -71,16 +71,56 @@ class MSSqlAdapter {
             callback.call(self, err);
         });
     }
-    close() {
+    /**
+     * Opens a database connection
+     */
+    openAsync() {
+        return new Promise((resolve, reject) => {
+            return this.open( err => {
+                if (err) {
+                    return reject(err);
+                }
+                return resolve();
+            });
+        });
+    }
+    /**
+     * 
+     * @param {Function=} callback 
+     */
+    close(callback) {
         const self = this;
-        if (!self.rawConnection)
+        if (self.rawConnection == null)
+        {
+            if (typeof callback == 'function') {
+                return callback();
+            } 
             return;
+        }
         self.rawConnection.close(function (err) {
             if (err) {
-                TraceUtils.log(err);
-                //do nothing
-                self.rawConnection = null;
+                TraceUtils.error('An error occurred while closing database connection');
+                TraceUtils.error(err);
             }
+            //do nothing
+            self.rawConnection = null;
+            // invoke callback
+            if (typeof callback == 'function') {
+                return callback();
+            }
+        });
+    }
+    /**
+     * Closes the current database connection
+     */
+    closeAsync() {
+        return new Promise((resolve, reject) => {
+            return this.close( err => {
+                if (err) {
+                    return reject(err);
+                }
+                return resolve();
+            });
         });
     }
     /**
