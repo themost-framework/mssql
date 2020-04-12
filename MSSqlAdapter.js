@@ -199,14 +199,25 @@ class MSSqlAdapter {
         });
     }
     /**
-     * Executes an operation against database and returns the results.
-     * @param {*} batch
-     * @param {Function} callback
-     * @deprecated DataAdapter.executeBatch() is obsolete. Use DataAdapter.executeInTransaction() instead.
+     * Begins a data transaction and executes the given function
+     * @param func {Function}
      */
-    executeBatch(batch, callback) {
-        callback = callback || function () { };
-        return callback(new Error('DataAdapter.executeBatch() is obsolete. Use DataAdapter.executeInTransaction() instead.'));
+    executeInTransactionAsync(func) {
+        const self = this;
+        return new Promise((resolve, reject) => {
+            return this.executeInTransaction((callback) => {
+                return func.call(this).then( res => {
+                    return callback(null, res);
+                }).catch( err => {
+                    return callback(res);
+                });
+            }, (err, res) => {
+                if (err) {
+                    return reject(err);
+                }
+                return resolve(res);
+            });
+        });
     }
     /**
      * Produces a new identity value for the given entity and attribute.
@@ -345,6 +356,21 @@ class MSSqlAdapter {
         catch (err) {
             callback.bind(self)(err);
         }
+    }
+    /**
+     * @param query {*}
+     * @param values {*}
+     * @returns Promise<any>
+     */
+    executeAsync(query, values) {
+        return new Promise((resolve, reject) => {
+            return this.execute(query, values, (err, res) => {
+                if (err) {
+                    return reject(err);
+                }
+                return resolve(res);
+            });
+        });
     }
     /**
      * Formats an object based on the format string provided. Valid formats are:
@@ -865,6 +891,72 @@ class MSSqlAdapter {
                 });
             }
         });
+    }
+    /**
+     * A utility for database object
+     * @param {string} name 
+     */
+    database(name) {
+        const self = this;
+        let db = name;
+        let owner = 'dbo';
+        const matches = /(\w+)\.(\w+)/.exec(name);
+        if (matches) {
+            owner = matches[1];
+            db = matches[2];
+        }
+        return {
+            exists: function(callback) {
+                const query = new QueryExpression().from('sys.databases').where('name').equal(db)
+                    .and('SCHEMA_NAME(owner_sid)').equal(owner)
+                    .select('name');
+                self.execute(query, null, (err, res) => {
+                    if (err) {
+                        return callback(err);
+                    }
+                    return callback(null, res.length === 1);
+                });
+            },
+             existsAsync: function() {
+                return new Promise((resolve, reject) => {
+                    this.exists((err, value) => {
+                        if (err) {
+                            return reject(err);
+                        }
+                        return resolve(value);
+                    });
+                });
+            },
+            create: function(callback) {
+                const query = new QueryExpression().from('sys.databases').where('name').equal(db)
+                    .and('SCHEMA_NAME(owner_sid)').equal(owner)
+                    .select('name');
+                self.execute(query, null, (err, res) => {
+                    if (err) {
+                        return callback(err);
+                    }
+                    if (res.length === 1) {
+                        return callback();
+                    }
+                    return self.execute(`CREATE DATABASE ${db}`, null, (err) => {
+                        if (err) {
+                            return callback(err);
+                        }
+                        return callback();
+                    });
+                });
+            },
+            createAsync: function() {
+                return new Promise((resolve, reject) => {
+                    this.create((err) => {
+                        if (err) {
+                            return reject(err);
+                        }
+                        return resolve();
+                    });
+                });
+            }
+        }
     }
 }
 

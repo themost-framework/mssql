@@ -22,6 +22,20 @@ export declare interface MSSqlAdapterView {
     drop(callback: (err: Error) => void): void;
 }
 
+export declare interface MSSqlAdapterDatabase {
+    exists(callback: (err: Error, result: boolean) => void): void;
+    existsAsync(): Promise<boolean>;
+    create(callback: (err: Error) => void): void;
+    createAsync(): Promise<void>;
+}
+
+export declare interface MSSqlAdapterMigration {
+    add: Array<any>;
+    change?: Array<any>;
+    appliesTo: string;
+    version: string;
+}
+
 export declare class MSSqlAdapter {
     static formatType(field: any): string;
     open(callback: (err: Error) => void): void;
@@ -31,9 +45,13 @@ export declare class MSSqlAdapter {
     prepare(query: any, values?: Array<any>): any;
     createView(name: string, query: any, callback: (err: Error) => void): void;
     executeInTransaction(func: any, callback: (err: Error) => void): void;
-    migrate(obj: any, callback: (err: Error) => void): void;
+    executeInTransactionAsync(func: Promise<any>): Promise<any>;
+    migrate(obj: MSSqlAdapterMigration, callback: (err: Error) => void): void;
     selectIdentity(entity: string, attribute: string, callback: (err: Error, value: any) => void): void;
     execute(query: any, values: any, callback: (err: Error, value: any) => void): void;
+    executeAsync(query: any, values: any): Promise<any>;
+    executeAsync<T>(query: any, values: any): Promise<Array<T>>;
     table(name: string): MSSqlAdapterTable;
     view(name: string): MSSqlAdapterView;
+    database(name: string): MSSqlAdapterDatabase;
 }
