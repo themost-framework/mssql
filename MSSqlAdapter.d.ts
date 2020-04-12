@@ -8,12 +8,17 @@
 
 export declare interface MSSqlAdapterTable {
     create(fields:Array<any>, callback: (err: Error) => void): void;
+    createAsync(fields:Array<any>): Promise<void>;
     add(fields:Array<any>, callback: (err: Error) => void): void;
+    addAsync(fields:Array<any>): Promise<void>;
     change(fields:Array<any>, callback: (err: Error) => void): void;
+    changeAsync(fields:Array<any>): Promise<void>;
     exists(callback: (err: Error, result: boolean) => void): void;
+    existsAsync(): Promise<boolean>;
     version(callback: (err: Error, result: string) => void): void;
-    has_sequence(callback: (err: Error, result: boolean) => void): void;
+    versionAsync(): Promise<string>;
     columns(callback: (err: Error, result: Array<any>) => void): void;
+    columnsAsync(): Promise<Array<any>>;
 }
 
 export declare interface MSSqlAdapterView {

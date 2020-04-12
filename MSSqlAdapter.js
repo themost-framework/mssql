@@ -501,7 +501,17 @@ class MSSqlAdapter {
                     if (err) {
                         return callback(err);
                     }
-                    callback(null, result[0].count);
+                    callback(null, result[0].count === 1);
+                });
+            },
+            existsAsync: function() {
+                return new Promise((resolve, reject) => {
+                    this.exists((err, value) => {
+                        if (err) {
+                            return reject(err);
+                        }
+                        return resolve(value);
+                    });
                 });
             },
             /**
@@ -517,6 +527,16 @@ class MSSqlAdapter {
                         callback(null, '0.0');
                     else
                         callback(null, result[0].version || '0.0');
+                });
+            },
+            versionAsync: function() {
+                return new Promise((resolve, reject) => {
+                    this.version((err, value) => {
+                        if (err) {
+                            return reject(err);
+                        }
+                        return resolve(value);
+                    });
                 });
             },
             /**
@@ -535,6 +555,16 @@ class MSSqlAdapter {
                         }
                         callback(null, result);
                     });
+            },
+            columnsAsync: function() {
+                return new Promise((resolve, reject) => {
+                    this.columns((err, res) => {
+                        if (err) {
+                            return reject(err);
+                        }
+                        return resolve(resa);
+                    });
+                });
             },
             /**
              * @param {{name:string,type:string,primary:boolean|number,nullable:boolean|number,size:number, scale:number,precision:number,oneToMany:boolean}[]|*} fields
@@ -570,6 +600,16 @@ class MSSqlAdapter {
                     callback(err);
                 });
             },
+            createAsync: function(fields) {
+                return new Promise((resolve, reject) => {
+                    this.create(fields, (err, res) => {
+                        if (err) {
+                            return reject(err);
+                        }
+                        return resolve(resa);
+                    });
+                });
+            },
             /**
              * Alters the table by adding an array of fields
              * @param {{name:string,type:string,primary:boolean|number,nullable:boolean|number,size:number,oneToMany:boolean}[]|*} fields
@@ -594,6 +634,16 @@ class MSSqlAdapter {
                 }).join(';');
                 self.execute(sql, [], function (err) {
                     callback(err);
+                });
+            },
+            addAsync: function(fields) {
+                return new Promise((resolve, reject) => {
+                    this.add(fields, (err, res) => {
+                        if (err) {
+                            return reject(err);
+                        }
+                        return resolve(resa);
+                    });
                 });
             },
             /**
@@ -621,7 +671,17 @@ class MSSqlAdapter {
                 self.execute(sql, [], function (err) {
                     callback(err);
                 });
-            }
+            },
+            changeAsync: function(fields) {
+                return new Promise((resolve, reject) => {
+                    this.add(fields, (err, res) => {
+                        if (err) {
+                            return reject(err);
+                        }
+                        return resolve(resa);
+                    });
+                });
+            },
         };
     }
     /**
