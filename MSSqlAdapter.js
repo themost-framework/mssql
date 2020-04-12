@@ -209,7 +209,7 @@ class MSSqlAdapter {
                 return func.call(this).then( res => {
                     return callback(null, res);
                 }).catch( err => {
-                    return callback(res);
+                    return callback(err);
                 });
             }, (err, res) => {
                 if (err) {
@@ -716,7 +716,17 @@ class MSSqlAdapter {
                     if (err) {
                         return callback(err);
                     }
-                    callback(null, result[0].count);
+                    callback(null, result[0].count === 1);
+                });
+            },
+            existsAsync: function() {
+                return new Promise((resolve, reject) => {
+                    this.exists((err, value) => {
+                        if (err) {
+                            return reject(err);
+                        }
+                        return resolve(value);
+                    });
                 });
             },
             /**
@@ -750,6 +760,16 @@ class MSSqlAdapter {
                     });
                 });
             },
+            dropAsync: function(q) {
+                return new Promise((resolve, reject) => {
+                    this.drop((err) => {
+                        if (err) {
+                            return reject(err);
+                        }
+                        return resolve();
+                    });
+                });
+            },
             /**
              * @param {QueryExpression|*} q
              * @param {Function} callback
@@ -773,6 +793,16 @@ class MSSqlAdapter {
                     });
                 }, function (err) {
                     callback(err);
+                });
+            },
+            createAsync: function(q) {
+                return new Promise((resolve, reject) => {
+                    this.create(q, (err) => {
+                        if (err) {
+                            return reject(err);
+                        }
+                        return resolve();
+                    });
                 });
             }
         };

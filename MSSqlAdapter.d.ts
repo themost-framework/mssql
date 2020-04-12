@@ -23,8 +23,11 @@ export declare interface MSSqlAdapterTable {
 
 export declare interface MSSqlAdapterView {
     create(query: any, callback: (err: Error) => void): void;
+    createAsync(query: any): Promise<void>;
     exists(callback: (err: Error, result: boolean) => void): void;
+    existsAsync(): Promise<boolean>;
     drop(callback: (err: Error) => void): void;
+    dropAsync(): Promise<void>;
 }
 
 export declare interface MSSqlAdapterDatabase {

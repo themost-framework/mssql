@@ -107,5 +107,6 @@ dist
 .vscode
 .idea
 .theia
+.DS_Store
 # Testing
 spec/helpers/env.js

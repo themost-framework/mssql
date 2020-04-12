@@ -44,7 +44,8 @@ async function tryDropTestDatabase() {
     const query = new QueryExpression().from('sys.databases').select('database_id', 'name').where('name').equal(database);
     const res = await adapter.executeAsync(query);
     if (res.length === 1) {
-        await adapter.executeAsync(`DROP DATABASE ${database};`);
+        await adapter.executeAsync(`ALTER DATABASE [${database}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE`);
+        await adapter.executeAsync(`DROP DATABASE [${database}];`);
     }
     await adapter.closeAsync();
 }
@@ -206,6 +207,25 @@ describe('MSSqlFormatter', () => {
         expect(res).toBeInstanceOf(Array);
         expect(res.length).toBe(1);
         expect(res[0].LastName).toBe('Davolio-Arnold');
+        // drop table
+        await adapter.executeAsync(`DROP TABLE [${EmployeeModel.source}];`);
+        await adapter.closeAsync();
+    });
+
+
+    it('should use view(string).exists()', async () => {
+        const adapter = new MSSqlAdapter(testConnectionOptions);
+        let exists = await adapter.view(`EmployeesView`).existsAsync();
+        expect(exists).toBeFalse();
+
+        await adapter.table(EmployeeModel.source).create(EmployeeModel.fields);
+        
+        await adapter.view(`EmployeesView`).createAsync(new QueryExpression().from('Employees').select('*'));
+
+        exists = await adapter.view(`EmployeesView`).existsAsync();
+        expect(exists).toBeTrue();
+        // drop view
+        await adapter.view(`EmployeesView`).dropAsync();
         // drop table
         await adapter.executeAsync(`DROP TABLE [${EmployeeModel.source}];`);
         await adapter.closeAsync();
