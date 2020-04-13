@@ -22,7 +22,7 @@
     "database"
   ],
   "author": "Kyriakos Barbounakis <k.barbounakis@gmail.com>",
-  "license": "BSD3-Clause",
+  "license": "BSD-3-Clause",
   "bugs": {
     "url": "https://github.com/themost-framework/themost-mssql/issues"
   },
