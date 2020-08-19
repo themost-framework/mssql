@@ -328,7 +328,7 @@ class MSSqlAdapter {
                     const request = self.transaction ? new mssql.Request(self.transaction) : new mssql.Request(self.rawConnection);
                     let preparedSql = self.prepare(sql, values);
                     if (typeof query.$insert !== 'undefined')
-                        preparedSql += ';SELECT @@IDENTITY as insertId';
+                        preparedSql += ';SELECT SCOPE_IDENTITY() as insertId';
                     request.query(preparedSql, function (err, result) {
                         if (process.env.NODE_ENV === 'development') {
                             TraceUtils.log(util.format('SQL (Execution Time:%sms):%s, Parameters:%s', (new Date()).getTime() - startTime, sql, JSON.stringify(values)));
