@@ -873,7 +873,7 @@ class MSSqlAdapter {
                             if (err) {
                                 return cb(err);
                             }
-                            cb(null, exists);
+                            cb(null, exists ? 1 :0);
                         });
                     },
                     //4b. Migrate target table (create or alter)
