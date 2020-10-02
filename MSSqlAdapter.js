@@ -59,10 +59,12 @@ class MSSqlAdapter {
         callback = callback || function () { };
         const self = this;
         if (this.rawConnection) {
-            callback.call(self);
-            return;
+            return callback.call(self);
         }
-        self.rawConnection = new mssql.Connection(self.options);
+        // clone connection options
+        const connectionOptions = Object.assign({}, self.options);
+        // create connection
+        self.rawConnection = new mssql.Connection(connectionOptions);
         self.rawConnection.connect(function (err) {
             if (err) {
                 self.rawConnection = null;
