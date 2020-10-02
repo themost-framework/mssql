@@ -9,7 +9,7 @@ const mssql = require('mssql');
 const async = require('async');
 const util = require('util');
 const { TraceUtils } = require('@themost/common');
-const { QueryExpression, SqlUtils } = require('@themost/query')
+const { QueryExpression, SqlUtils } = require('@themost/query');
 const { MSSqlFormatter } = require('./MSSqlFormatter');
 /**
  * @class
@@ -203,7 +203,6 @@ class MSSqlAdapter {
      * @param func {Function}
      */
     executeInTransactionAsync(func) {
-        const self = this;
         return new Promise((resolve, reject) => {
             return this.executeInTransaction((callback) => {
                 return func.call(this).then( res => {
@@ -219,31 +218,43 @@ class MSSqlAdapter {
             });
         });
     }
+
     /**
      * Produces a new identity value for the given entity and attribute.
      * @param entity {String} The target entity name
      * @param attribute {String} The target attribute
-     * @param callback {Function=}
+     * @param callback {Function}
      */
     selectIdentity(entity, attribute, callback) {
-        const self = this;
+        // validate current connection transaction
+        const inTransaction = (this.transaction != null);
+        // create a dedicated connection or use current connection if transaction is empty
+        const db = inTransaction ? new MSSqlAdapter(this.options) : this;
+        // create migration schema
         const migration = {
-            appliesTo: 'increment_id',
-            model: 'increments',
-            version: '1.0',
-            description: 'Increments migration (version 1.0)',
-            add: [
-                { name: 'id', type: 'Counter', primary: true },
-                { name: 'entity', type: 'Text', size: 120 },
-                { name: 'attribute', type: 'Text', size: 120 },
-                { name: 'value', type: 'Integer' }
+            "appliesTo": "increment_id",
+            "model": "increments",
+            "version": "1.0",
+            "description": "Increments migration (version 1.0)",
+            "add": [
+                { "name": "id", "type": "Counter", "primary": true },
+                { "name": "entity", "type": "Text", "size": 120 },
+                { "name": "attribute", "type": "Text", "size": 120 },
+                { "name": "value", "type": "Integer" }
             ]
         };
         //ensure increments entity
-        self.migrate(migration, function (err) {
+        db.migrate(migration, (err) => {
             //throw error if any
             if (err) {
-                return callback(err);
+                if (inTransaction === false) {
+                    return callback(err);
+                }
+                // close dedicated connection
+                return db.close(() => {
+                    // and return error
+                    return callback(err);
+                });
             }
             // prepare
             const sql = `IF NOT EXISTS(SELECT * FROM [increment_id] WHERE [entity]='${entity}' AND [attribute] = '${attribute}')
@@ -252,18 +263,29 @@ class MSSqlAdapter {
                 UPDATE  [increment_id] SET [value] = [value] + 1 WHERE [entity]='${entity}' AND attribute = '${attribute}';
                 SELECT [value] FROM [increment_id] WHERE [entity]='${entity}' AND [attribute] = '${attribute}';`;
             // execute
-            return self.execute(sql, null, function (err, result) {
-                if (err) {
-                    return callback(err);
+            return db.execute(sql, null, (err, result) => {
+                if (inTransaction === false) {
+                    if (err) {
+                        return callback(err);
+                    }
+                    // return result[0]
+                    return callback(null, result[0].value);
                 }
-                // return result[0]
-                return callback(null, result[0].value);
+                // close dedicated connection
+                return db.close(() => {
+                    if (err) {
+                        return callback(err);
+                    }
+                    // and return result[0]
+                    return callback(null, result[0].value);
+                });
             });
         });
     }
+
     /**
-     * @param query {*}
-     * @param values {*}
+     * @param {*} query
+     * @param {*} values
      * @param {function} callback
      */
     execute(query, values, callback) {
@@ -533,7 +555,7 @@ class MSSqlAdapter {
                         if (err) {
                             return reject(err);
                         }
-                        return resolve(resa);
+                        return resolve(res);
                     });
                 });
             },
@@ -544,7 +566,7 @@ class MSSqlAdapter {
             create: function (fields, callback) {
                 callback = callback || function () { };
                 fields = fields || [];
-                if (!util.isArray(fields)) {
+                if (!Array.isArray(fields)) {
                     return callback(new Error('Invalid argument type. Expected Array.'));
                 }
                 if (fields.length === 0) {
@@ -577,7 +599,7 @@ class MSSqlAdapter {
                         if (err) {
                             return reject(err);
                         }
-                        return resolve(resa);
+                        return resolve(res);
                     });
                 });
             },
@@ -590,7 +612,7 @@ class MSSqlAdapter {
                 callback = callback || function () { };
                 callback = callback || function () { };
                 fields = fields || [];
-                if (!util.isArray(fields)) {
+                if (!Array.isArray(fields)) {
                     //invalid argument exception
                     return callback(new Error('Invalid argument type. Expected Array.'));
                 }
@@ -613,7 +635,7 @@ class MSSqlAdapter {
                         if (err) {
                             return reject(err);
                         }
-                        return resolve(resa);
+                        return resolve(res);
                     });
                 });
             },
@@ -626,7 +648,7 @@ class MSSqlAdapter {
                 callback = callback || function () { };
                 callback = callback || function () { };
                 fields = fields || [];
-                if (!util.isArray(fields)) {
+                if (!Array.isArray(fields)) {
                     //invalid argument exception
                     return callback(new Error('Invalid argument type. Expected Array.'));
                 }
@@ -649,7 +671,7 @@ class MSSqlAdapter {
                         if (err) {
                             return reject(err);
                         }
-                        return resolve(resa);
+                        return resolve(res);
                     });
                 });
             },
@@ -731,7 +753,7 @@ class MSSqlAdapter {
                     });
                 });
             },
-            dropAsync: function(q) {
+            dropAsync: function() {
                 return new Promise((resolve, reject) => {
                     this.drop((err) => {
                         if (err) {
@@ -863,19 +885,19 @@ class MSSqlAdapter {
                             });
                         }
                         //columns to be removed (unsupported)
-                        if (util.isArray(migration.remove)) {
+                        if (Array.isArray(migration.remove)) {
                             if (migration.remove.length > 0) {
                                 return cb(new Error('Data migration remove operation is not supported by this adapter.'));
                             }
                         }
                         //columns to be changed (unsupported)
-                        if (util.isArray(migration.change)) {
+                        if (Array.isArray(migration.change)) {
                             if (migration.change.length > 0) {
                                 return cb(new Error('Data migration change operation is not supported by this adapter. Use add collection instead.'));
                             }
                         }
                         let column, newType, oldType;
-                        if (util.isArray(migration.add)) {
+                        if (Array.isArray(migration.add)) {
                             //init change collection
                             migration.change = [];
                             //get table columns
@@ -1017,10 +1039,10 @@ class MSSqlAdapter {
                     });
                 });
             }
-        }
+        };
     }
 }
 
 module.exports = {
     MSSqlAdapter
-}
+};
