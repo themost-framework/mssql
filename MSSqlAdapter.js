@@ -243,50 +243,21 @@ class MSSqlAdapter {
         self.migrate(migration, function (err) {
             //throw error if any
             if (err) {
-                callback.call(self, err);
-                return;
+                return callback(err);
             }
-            self.execute('SELECT * FROM increment_id WHERE entity=? AND attribute=?', [entity, attribute], function (err, result) {
+            // prepare
+            const sql = `IF NOT EXISTS(SELECT * FROM [increment_id] WHERE [entity]='${entity}' AND [attribute] = '${attribute}')
+                INSERT INTO [increment_id]([entity], [attribute], [value]) VALUES ('${entity}', '${attribute}', (SELECT ISNULL(MAX([${attribute}]), 0) 
+                FROM [${entity}]));
+                UPDATE  [increment_id] SET [value] = [value] + 1 WHERE [entity]='${entity}' AND attribute = '${attribute}';
+                SELECT [value] FROM [increment_id] WHERE [entity]='${entity}' AND [attribute] = '${attribute}';`;
+            // execute
+            return self.execute(sql, null, function (err, result) {
                 if (err) {
-                    callback.call(self, err);
-                    return;
+                    return callback(err);
                 }
-                if (result.length === 0) {
-                    //get max value by querying the given entity
-                    const q = new QueryExpression().from(entity).select([new QueryField().max(attribute)]);
-                    self.execute(q, null, function (err, result) {
-                        if (err) {
-                            callback.call(self, err);
-                            return;
-                        }
-                        let value = 1;
-                        if (result.length > 0) {
-                            value = parseInt(result[0][attribute]) + 1;
-                        }
-                        self.execute('INSERT INTO increment_id(entity, attribute, value) VALUES (?,?,?)', [entity, attribute, value], function (err) {
-                            //throw error if any
-                            if (err) {
-                                callback.call(self, err);
-                                return;
-                            }
-                            //return new increment value
-                            callback.call(self, err, value);
-                        });
-                    });
-                }
-                else {
-                    //get new increment value
-                    const value = parseInt(result[0].value) + 1;
-                    self.execute('UPDATE increment_id SET value=? WHERE id=?', [value, result[0].id], function (err) {
-                        //throw error if any
-                        if (err) {
-                            callback.call(self, err);
-                            return;
-                        }
-                        //return new increment value
-                        callback.call(self, err, value);
-                    });
-                }
+                // return result[0]
+                return callback(null, result[0].value);
             });
         });
     }
