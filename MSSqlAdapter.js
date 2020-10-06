@@ -954,7 +954,32 @@ class MSSqlAdapter {
                         else {
                             cb(new Error('Invalid migration data.'));
                         }
-                    }, function (arg, cb) {
+                    },
+                    //Apply data model indexes
+                    function (arg, cb) {
+                        if (arg <= 0) {
+                            return cb(null, arg);
+                        }
+                        if (migration.indexes) {
+                            const tableIndexes = self.indexes(migration.appliesTo);
+                            //enumerate migration constraints
+                            async.eachSeries(migration.indexes, function (index, indexCallback) {
+                                tableIndexes.create(index.name, index.columns, indexCallback);
+                            }, function (err) {
+                                //throw error
+                                if (err) {
+                                    return cb(err);
+                                }
+                                //or return success flag
+                                return cb(null, 1);
+                            });
+                        }
+                        else {
+                            //do nothing and exit
+                            return cb(null, 1);
+                        }
+                    },
+                    function (arg, cb) {
                         if (arg > 0) {
                             self.execute('INSERT INTO migrations (appliesTo,model,version,description) VALUES (?,?,?,?)', [migration.appliesTo,
                             migration.model,
