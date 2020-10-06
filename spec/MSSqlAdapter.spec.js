@@ -1,5 +1,5 @@
-const {MSSqlAdapter, createInstance} = require('../index');
-const { QueryExpression }  = require('@themost/query')
+const { MSSqlAdapter, createInstance } = require('../index');
+const { QueryExpression } = require('@themost/query')
 const util = require('util');
 const ProductModel = require('./config/models/Product.json');
 const EmployeeModel = require('./config/models/Employee.json');
@@ -52,10 +52,10 @@ async function tryDropTestDatabase() {
 
 describe('MSSqlFormatter', () => {
 
-    beforeAll( async () => {
+    beforeAll(async () => {
         await tryCreateTestDatabase();
     });
-    afterAll( async () => {
+    afterAll(async () => {
         await tryDropTestDatabase();
     });
 
@@ -164,9 +164,9 @@ describe('MSSqlFormatter', () => {
         if (exists === false) {
             await adapter.table(EmployeeModel.source).create(EmployeeModel.fields);
         }
-        const sources = EmployeeModel.seed.map( item => {
+        const sources = EmployeeModel.seed.map(item => {
             return new QueryExpression().insert(item).into(EmployeeModel.source);
-        }).map( query => {
+        }).map(query => {
             return adapter.executeAsync(query);
         });
         await Promise.all(sources);
@@ -188,9 +188,9 @@ describe('MSSqlFormatter', () => {
         if (exists === false) {
             await adapter.table(EmployeeModel.source).create(EmployeeModel.fields);
         }
-        const sources = EmployeeModel.seed.map( item => {
+        const sources = EmployeeModel.seed.map(item => {
             return new QueryExpression().insert(item).into(EmployeeModel.source);
-        }).map( query => {
+        }).map(query => {
             return adapter.executeAsync(query);
         });
         await Promise.all(sources);
@@ -201,8 +201,8 @@ describe('MSSqlFormatter', () => {
             .where('LastName').equal('Davolio');
         await adapter.executeAsync(updateQuery);
         const query = new QueryExpression().from(EmployeeModel.source)
-        .where('LastName').equal('Davolio-Arnold')
-        .select('*');
+            .where('LastName').equal('Davolio-Arnold')
+            .select('*');
         let res = await adapter.executeAsync(query);
         expect(res).toBeInstanceOf(Array);
         expect(res.length).toBe(1);
@@ -219,7 +219,7 @@ describe('MSSqlFormatter', () => {
         expect(exists).toBeFalse();
 
         await adapter.table(EmployeeModel.source).create(EmployeeModel.fields);
-        
+
         await adapter.view(`EmployeesView`).createAsync(new QueryExpression().from('Employees').select('*'));
 
         exists = await adapter.view(`EmployeesView`).existsAsync();
@@ -228,6 +228,78 @@ describe('MSSqlFormatter', () => {
         await adapter.view(`EmployeesView`).dropAsync();
         // drop table
         await adapter.executeAsync(`DROP TABLE [${EmployeeModel.source}];`);
+        await adapter.closeAsync();
+    });
+
+    it('should use indexes(string).list()', async () => {
+        const adapter = new MSSqlAdapter(testConnectionOptions);
+        let exists = await adapter.table(ProductModel.source).existsAsync();
+        if (exists === true) {
+            // drop table
+            await adapter.executeAsync(`DROP TABLE [${ProductModel.source}];`);
+        }
+        await adapter.table(ProductModel.source).create(ProductModel.fields);
+        exists = await adapter.table(ProductModel.source).existsAsync();
+        expect(exists).toBeTrue();
+        // list indexes
+        const indexes = await adapter.indexes(ProductModel.source).listAsync();
+        expect(indexes).toBeTruthy();
+        expect(indexes.length).toBeGreaterThan(0);
+        // get index 0
+        const index0 = indexes[0];
+        expect(index0).toBeTruthy();
+        expect(index0.columns[0]).toBe('ProductID');
+        // drop table
+        await adapter.executeAsync(`DROP TABLE [${ProductModel.source}];`);
+        await adapter.closeAsync();
+    });
+
+    it('should use indexes(string).create()', async () => {
+        const adapter = new MSSqlAdapter(testConnectionOptions);
+        let exists = await adapter.table(ProductModel.source).existsAsync();
+        if (exists === true) {
+            // drop table
+            await adapter.executeAsync(`DROP TABLE [${ProductModel.source}];`);
+        }
+        await adapter.table(ProductModel.source).create(ProductModel.fields);
+        exists = await adapter.table(ProductModel.source).existsAsync();
+        expect(exists).toBeTrue();
+        await adapter.indexes(ProductModel.source).createAsync('INDEX_Product_Name', [
+            "ProductName"
+        ]);
+        const indexes = await adapter.indexes(ProductModel.source).listAsync();
+        const findIndex = indexes.find((x) => x.name === 'INDEX_Product_Name');
+        expect(findIndex).toBeTruthy();
+        // drop table
+        await adapter.executeAsync(`DROP TABLE [${ProductModel.source}];`);
+        await adapter.closeAsync();
+    });
+
+    it('should use indexes(string).drop()', async () => {
+        const adapter = new MSSqlAdapter(testConnectionOptions);
+        let exists = await adapter.table(ProductModel.source).existsAsync();
+        if (exists === true) {
+            // drop table
+            await adapter.executeAsync(`DROP TABLE [${ProductModel.source}];`);
+        }
+        await adapter.table(ProductModel.source).create(ProductModel.fields);
+        exists = await adapter.table(ProductModel.source).existsAsync();
+        expect(exists).toBeTrue();
+        await adapter.indexes(ProductModel.source).createAsync('INDEX_Product_Name', [
+            "ProductName"
+        ]);
+        let drop = await adapter.indexes(ProductModel.source).dropAsync('INDEX_Product_Name');
+        expect(drop).toBe(1);
+
+        const indexes = await adapter.indexes(ProductModel.source).listAsync();
+        const findIndex = indexes.find((x) => x.name === 'INDEX_Product_Name');
+        expect(findIndex).toBeFalsy();
+        // drop twice
+        drop = await adapter.indexes(ProductModel.source).dropAsync('INDEX_Product_Name');
+        expect(drop).toBe(0);
+
+        // drop table
+        await adapter.executeAsync(`DROP TABLE [${ProductModel.source}];`);
         await adapter.closeAsync();
     });
 

@@ -1,6 +1,6 @@
 {
   "name": "@themost/mssql",
-  "version": "2.5.3-next.2",
+  "version": "2.5.3-next.3",
   "description": "MOST Web Framework MSSQL Data Adapter",
   "main": "index.js",
   "scripts": {
@@ -34,5 +34,16 @@
   "peerDependencies": {
     "@themost/common": ">= 2.5.0 < 3",
     "@themost/query": ">= 2.5.0 < 3"
+  },
+  "devDependencies": {
+    "@themost/common": ">=2.5.0 < 3",
+    "@themost/query": ">=2.5.0 < 3",
+    "@themost/sqlite": "^2.5.1",
+    "@types/jasmine": "^3.5.14",
+    "dotenv": "^8.2.0",
+    "eslint": "^6.8.0",
+    "eslint-plugin-node": "^11.1.0",
+    "jasmine": "^3.5.0",
+    "jasmine-spec-reporter": "^5.0.2"
   }
 }
