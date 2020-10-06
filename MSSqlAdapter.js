@@ -78,7 +78,7 @@ class MSSqlAdapter {
      */
     openAsync() {
         return new Promise((resolve, reject) => {
-            return this.open( err => {
+            return this.open(err => {
                 if (err) {
                     return reject(err);
                 }
@@ -92,11 +92,10 @@ class MSSqlAdapter {
      */
     close(callback) {
         const self = this;
-        if (self.rawConnection == null)
-        {
+        if (self.rawConnection == null) {
             if (typeof callback == 'function') {
                 return callback();
-            } 
+            }
             return;
         }
         self.rawConnection.close(function (err) {
@@ -117,7 +116,7 @@ class MSSqlAdapter {
      */
     closeAsync() {
         return new Promise((resolve, reject) => {
-            return this.close( err => {
+            return this.close(err => {
                 if (err) {
                     return reject(err);
                 }
@@ -207,9 +206,9 @@ class MSSqlAdapter {
     executeInTransactionAsync(func) {
         return new Promise((resolve, reject) => {
             return this.executeInTransaction((callback) => {
-                return func.call(this).then( res => {
+                return func.call(this).then(res => {
                     return callback(null, res);
-                }).catch( err => {
+                }).catch(err => {
                     return callback(err);
                 });
             }, (err, res) => {
@@ -498,7 +497,7 @@ class MSSqlAdapter {
                     callback(null, result[0].count === 1);
                 });
             },
-            existsAsync: function() {
+            existsAsync: function () {
                 return new Promise((resolve, reject) => {
                     this.exists((err, value) => {
                         if (err) {
@@ -523,7 +522,7 @@ class MSSqlAdapter {
                         callback(null, result[0].version || '0.0');
                 });
             },
-            versionAsync: function() {
+            versionAsync: function () {
                 return new Promise((resolve, reject) => {
                     this.version((err, value) => {
                         if (err) {
@@ -550,7 +549,7 @@ class MSSqlAdapter {
                         callback(null, result);
                     });
             },
-            columnsAsync: function() {
+            columnsAsync: function () {
                 return new Promise((resolve, reject) => {
                     this.columns((err, res) => {
                         if (err) {
@@ -578,10 +577,10 @@ class MSSqlAdapter {
                 }).map((x) => {
                     return MSSqlAdapter.format('[%f] %t', x);
                 }).join(', ');
-                
+
                 //add primary key constraint
-                const strPKFields = fields.filter((x) => { 
-                    return (x.primary === true || x.primary === 1); 
+                const strPKFields = fields.filter((x) => {
+                    return (x.primary === true || x.primary === 1);
                 }).map((x) => {
                     return MSSqlAdapter.format('[%f]', x);
                 }).join(', ');
@@ -594,7 +593,7 @@ class MSSqlAdapter {
                     callback(err);
                 });
             },
-            createAsync: function(fields) {
+            createAsync: function (fields) {
                 return new Promise((resolve, reject) => {
                     this.create(fields, (err, res) => {
                         if (err) {
@@ -630,7 +629,7 @@ class MSSqlAdapter {
                     callback(err);
                 });
             },
-            addAsync: function(fields) {
+            addAsync: function (fields) {
                 return new Promise((resolve, reject) => {
                     this.add(fields, (err, res) => {
                         if (err) {
@@ -666,7 +665,7 @@ class MSSqlAdapter {
                     callback(err);
                 });
             },
-            changeAsync: function(fields) {
+            changeAsync: function (fields) {
                 return new Promise((resolve, reject) => {
                     this.add(fields, (err, res) => {
                         if (err) {
@@ -713,7 +712,7 @@ class MSSqlAdapter {
                     callback(null, result[0].count === 1);
                 });
             },
-            existsAsync: function() {
+            existsAsync: function () {
                 return new Promise((resolve, reject) => {
                     this.exists((err, value) => {
                         if (err) {
@@ -754,7 +753,7 @@ class MSSqlAdapter {
                     });
                 });
             },
-            dropAsync: function() {
+            dropAsync: function () {
                 return new Promise((resolve, reject) => {
                     this.drop((err) => {
                         if (err) {
@@ -789,7 +788,7 @@ class MSSqlAdapter {
                     callback(err);
                 });
             },
-            createAsync: function(q) {
+            createAsync: function (q) {
                 return new Promise((resolve, reject) => {
                     this.create(q, (err) => {
                         if (err) {
@@ -867,7 +866,7 @@ class MSSqlAdapter {
                             if (err) {
                                 return cb(err);
                             }
-                            cb(null, exists ? 1 :0);
+                            cb(null, exists ? 1 : 0);
                         });
                     },
                     //4b. Migrate target table (create or alter)
@@ -907,8 +906,8 @@ class MSSqlAdapter {
                                     return cb(err);
                                 }
                                 const findColumnFunc = (name) => {
-                                    return columns.find((y) => { 
-                                        return (y.name === name); 
+                                    return columns.find((y) => {
+                                        return (y.name === name);
                                     });
                                 };
                                 for (let i = 0; i < migration.add.length; i++) {
@@ -990,7 +989,7 @@ class MSSqlAdapter {
             db = matches[2];
         }
         return {
-            exists: function(callback) {
+            exists: function (callback) {
                 const query = new QueryExpression().from('sys.databases').where('name').equal(db)
                     .and('SCHEMA_NAME(owner_sid)').equal(owner)
                     .select('name');
@@ -1001,7 +1000,7 @@ class MSSqlAdapter {
                     return callback(null, res.length === 1);
                 });
             },
-             existsAsync: function() {
+            existsAsync: function () {
                 return new Promise((resolve, reject) => {
                     this.exists((err, value) => {
                         if (err) {
@@ -1011,7 +1010,7 @@ class MSSqlAdapter {
                     });
                 });
             },
-            create: function(callback) {
+            create: function (callback) {
                 const query = new QueryExpression().from('sys.databases').where('name').equal(db)
                     .and('SCHEMA_NAME(owner_sid)').equal(owner)
                     .select('name');
@@ -1030,7 +1029,7 @@ class MSSqlAdapter {
                     });
                 });
             },
-            createAsync: function() {
+            createAsync: function () {
                 return new Promise((resolve, reject) => {
                     this.create((err) => {
                         if (err) {
@@ -1042,6 +1041,174 @@ class MSSqlAdapter {
             }
         };
     }
+
+    /**
+     * Table indexes helper
+     * @param {string} table 
+     */
+    indexes(table) {
+        const self = this, formatter = new MSSqlFormatter();
+        return {
+            list: function (callback) {
+                const this1 = this;
+                if (Object.prototype.hasOwnProperty.call(this1, '_indexes')) {
+                    return callback(null, this1['_indexes']);
+                }
+                const sqlIndexes = `SELECT [object_id], [index_id], [name], [type], [type_desc], [is_unique] 
+                FROM sys.indexes WHERE [object_id] = OBJECT_ID('${table}') ORDER BY [index_id]`;
+                const sqlIndexColumns = `SELECT  [ind].[object_id], [ind].[name], [ind].[index_id], [ic].[index_column_id] as [column_id], [col].[name] as [column_name]
+                FROM sys.indexes [ind] 
+                INNER JOIN 
+                    sys.index_columns [ic] ON  [ind].[object_id] = [ic].[object_id] and [ind].[index_id] = [ic].[index_id] 
+                INNER JOIN 
+                    sys.columns col ON [ic].[object_id] = [col].[object_id] and [ic].[column_id] = [col].[column_id]
+                    WHERE col.[object_id] =  OBJECT_ID('${table}') ORDER BY [ind].[index_id], [col].[column_id]`;
+
+                Promise.all([
+                    self.executeAsync(sqlIndexes, null),
+                    self.executeAsync(sqlIndexColumns, null)
+                ]).then((results) => {
+                    const indexes = results[0].map(function (x) {
+                        return {
+                            name: x.name,
+                            columns: results[1].filter((y) => x.index_id === y.index_id).map((y) => y.column_name)
+                        };
+                    });
+                    this1['_indexes'] = indexes;
+                    return callback(null, indexes);
+                }).catch((err) => {
+                    return callback(err);
+                });
+            },
+            listAsync: function () {
+                return new Promise((resolve, reject) => {
+                    this.list((err, res) => {
+                        if (err) {
+                            return reject(err);
+                        }
+                        return resolve(res);
+                    });
+                });
+            },
+            /**
+             * @param {string} name
+             * @param {Array|string} columns
+             * @param {Function} callback
+             */
+            create: function (name, columns, callback) {
+                const cols = [];
+                if (typeof columns === 'string') {
+                    cols.push(columns);
+                }
+                else if (Array.isArray(columns)) {
+                    cols.push.apply(cols, columns);
+                }
+                else {
+                    return callback(new Error('Invalid parameter. Columns parameter must be a string or an array of strings.'));
+                }
+                const thisArg = this;
+                thisArg.list(function (err, indexes) {
+                    if (err) {
+                        return callback(err);
+                    }
+                    const findIndex = indexes.find((x) => {
+                        return x.name === name;
+                    });
+                    //format create index SQL statement
+                    const escapeColumns = cols.map(function (x) {
+                        return formatter.escapeName(x);
+                    }).join(',');
+                    const sqlCreateIndex = `CREATE INDEX ${formatter.escapeName(name)} ON ${formatter.escapeName(table)}(${escapeColumns})`;
+                    if (findIndex == null) {
+                        self.execute(sqlCreateIndex, [], (err) => {
+                            if (err) {
+                                return callback(err);
+                            }
+                            return callback(null, 1);
+                        });
+                    }
+                    else {
+                        let nCols = cols.length;
+                        //enumerate existing columns
+                        findIndex.columns.forEach(function (x) {
+                            if (cols.indexOf(x) >= 0) {
+                                //column exists in index
+                                nCols -= 1;
+                            }
+                        });
+                        if (nCols > 0) {
+                            //drop index
+                            thisArg.drop(name, function (err) {
+                                if (err) {
+                                    return callback(err);
+                                }
+                                //and create it
+                                self.execute(sqlCreateIndex, [], (err) => {
+                                    if (err) {
+                                        return callback(err);
+                                    }
+                                    return callback(null, 1);
+                                });
+                            });
+                        }
+                        else {
+                            //do nothing
+                            return callback(null, 0);
+                        }
+                    }
+                });
+            },
+            /**
+             * @param {string} name
+             * @param {Array|string} columns
+             */
+            createAsync: function (name, columns) {
+                return new Promise((resolve, reject) => {
+                    this.create(name, columns, (err, res) => {
+                        if (err) {
+                            return reject(err);
+                        }
+                        return resolve(res);
+                    });
+                });
+            },
+            drop: function (name, callback) {
+                const thisArg = this;
+                if (typeof name !== 'string') {
+                    return callback(new Error('Name must be a valid string.'));
+                }
+                self.execute(`SELECT [object_id], [index_id], [name], [type], [type_desc], [is_unique] 
+                    FROM sys.indexes WHERE [object_id] = OBJECT_ID('${table}') AND [name]='${name}'`, null, function (err, result) {
+                    if (err) {
+                        return callback(err);
+                    }
+                    if (result.length === 0) {
+                        return callback(null, 0);
+                    }
+                    self.execute(`DROP INDEX ${formatter.escapeName(name)} ON ${formatter.escapeName(table)}`, null, (err) => {
+                        if (err) {
+                            return callback(err);
+                        }
+                        // cleanup indexes
+                        delete thisArg._indexes;
+                        // and return
+                        return callback(null, 1);
+                    });
+                });
+            },
+            dropAsync: function (name) {
+                return new Promise((resolve, reject) => {
+                    this.drop(name, (err, res) => {
+                        if (err) {
+                            return reject(err);
+                        }
+                        return resolve(res);
+                    });
+                });
+            }
+        };
+    }
+
 }
 
 module.exports = {
