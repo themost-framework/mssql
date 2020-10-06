@@ -1,3 +1,12 @@
+# development
 spec
 .github
 node_modules
+.env
+.eslintrc
+.eslintignore
+# editors
+.theia
+.vscode
+.idea
+.DS_Store
