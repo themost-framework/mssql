@@ -54,7 +54,7 @@ class MSSqlFormatter extends SqlFormatter {
             //delete row index field
             queryfields.pop();
             const fields = [];
-            queryfields.forEach( (x) => {
+            queryfields.forEach((x) => {
                 if (typeof x === 'string') {
                     fields.push(new QueryField(x));
                 }
@@ -119,7 +119,7 @@ class MSSqlFormatter extends SqlFormatter {
         if (typeof value === 'string')
             return '\'' + value.replace(/'/g, "''") + '\'';
         if (typeof value === 'boolean')
-            return value ? 1 : 0;
+            return value ? '1' : '0';
         if (typeof value === 'object') {
             //add an exception for Date object
             if (value instanceof Date)
