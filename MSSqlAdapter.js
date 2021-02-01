@@ -365,6 +365,7 @@ class MSSqlAdapter {
             });
         });
     }
+
     /**
      * Formats an object based on the format string provided. Valid formats are:
      * %t : Formats a field and returns field type definition
@@ -372,15 +373,24 @@ class MSSqlAdapter {
      * @param format {string}
      * @param obj {*}
      */
-    static format(format, obj) {
+    format(format, obj) {
         let result = format;
         if (/%t/.test(format))
-            result = result.replace(/%t/g, MSSqlAdapter.formatType(obj));
+            result = result.replace(/%t/g, this.formatType(obj));
         if (/%f/.test(format))
             result = result.replace(/%f/g, obj.name);
         return result;
     }
-    static formatType(field) {
+
+    /**
+     * @deprecated
+     * @param {*} obj 
+     */
+    static format(format, obj) {
+        new MSSqlAdapter().format(format, obj);
+    }
+
+    formatType(field) {
         const size = parseInt(field.size);
         const scale = parseInt(field.scale);
         let s = 'varchar(512) NULL';
@@ -459,6 +469,15 @@ class MSSqlAdapter {
      * @param {QueryExpression} query
      * @param {Function} callback
      */
+
+    /**
+     * @deprecated
+     * @param {*} field 
+     */
+    static formatType(field) {
+        new MSSqlAdapter().formatType(field);
+    }
+
     createView(name, query, callback) {
         return this.view(name).create(query, callback);
     }
@@ -575,14 +594,14 @@ class MSSqlAdapter {
                 let strFields = fields.filter((x) => {
                     return !x.oneToMany;
                 }).map((x) => {
-                    return MSSqlAdapter.format('[%f] %t', x);
+                    return self.format('[%f] %t', x);
                 }).join(', ');
 
                 //add primary key constraint
                 const strPKFields = fields.filter((x) => {
                     return (x.primary === true || x.primary === 1);
                 }).map((x) => {
-                    return MSSqlAdapter.format('[%f]', x);
+                    return self.format('[%f]', x);
                 }).join(', ');
                 if (strPKFields.length > 0) {
                     strFields += ', ' + util.format('PRIMARY KEY (%s)', strPKFields);
@@ -623,7 +642,7 @@ class MSSqlAdapter {
                 const strTable = util.format('[%s].[%s]', owner, table);
                 //generate SQL statement
                 const sql = fields.map((x) => {
-                    return MSSqlAdapter.format('ALTER TABLE ' + strTable + ' ADD [%f] %t', x);
+                    return self.format('ALTER TABLE ' + strTable + ' ADD [%f] %t', x);
                 }).join(';');
                 self.execute(sql, [], function (err) {
                     callback(err);
@@ -659,7 +678,7 @@ class MSSqlAdapter {
                 const strTable = util.format('[%s].[%s]', owner, table);
                 //generate SQL statement
                 const sql = fields.map((x) => {
-                    return MSSqlAdapter.format('ALTER TABLE ' + strTable + ' ALTER COLUMN [%f] %t', x);
+                    return self.format('ALTER TABLE ' + strTable + ' ALTER COLUMN [%f] %t', x);
                 }).join(';');
                 self.execute(sql, [], function (err) {
                     callback(err);
@@ -921,7 +940,7 @@ class MSSqlAdapter {
                                         }
                                         else {
                                             //get new type
-                                            newType = MSSqlAdapter.format('%t', x);
+                                            newType = self.format('%t', x);
                                             //get old type
                                             oldType = column.type1.replace(/\s+$/, '') + ((column.nullable === true || column.nullable === 1) ? ' null' : ' not null');
                                             //remove column from collection
