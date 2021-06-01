@@ -261,7 +261,8 @@ class MSSqlAdapter {
             const sql = `IF NOT EXISTS(SELECT * FROM [increment_id] WHERE [entity]='${entity}' AND [attribute] = '${attribute}')
                 INSERT INTO [increment_id]([entity], [attribute], [value]) VALUES ('${entity}', '${attribute}', (SELECT ISNULL(MAX([${attribute}]), 0) 
                 FROM [${entity}]));
-                UPDATE  [increment_id] SET [value] = [value] + 1 OUTPUT [inserted].[value] WHERE [entity]='${entity}' AND attribute = '${attribute}';`;
+                DECLARE @t TABLE (value int);
+                UPDATE  [increment_id] SET [value] = [value] + 1 OUTPUT [inserted].[value] INTO @t WHERE [entity]='${entity}' AND attribute = '${attribute}';SELECT * FROM @t`;
             // execute
             return db.execute(sql, null, (err, result) => {
                 if (inTransaction === false) {
