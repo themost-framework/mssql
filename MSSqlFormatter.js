@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://themost.io/license
  */
 const util = require('util');
-const { QueryField, QueryUtils, SqlUtils, SqlFormatter } = require('@themost/query');
+const { QueryField, SqlUtils, SqlFormatter } = require('@themost/query');
 
 function zeroPad(number, length) {
     number = number || 0;
@@ -44,17 +44,17 @@ class MSSqlFormatter extends SqlFormatter {
             const keys = Object.keys(obj.$select);
             if (keys.length === 0)
                 throw new Error('Entity is missing');
-            const queryfields = obj.$select[keys[0]], order = obj.$order;
-            queryfields.push(util.format('ROW_NUMBER() OVER(%s) AS __RowIndex', order ? self.format(order, '%o') : 'ORDER BY (SELECT NULL)'));
+            const queryFields = obj.$select[keys[0]], order = obj.$order;
+            queryFields.push(util.format('ROW_NUMBER() OVER(%s) AS __RowIndex', order ? self.format(order, '%o') : 'ORDER BY (SELECT NULL)'));
             if (order)
                 delete obj.$order;
             const subQuery = self.formatSelect(obj);
             if (order)
                 obj.$order = order;
             //delete row index field
-            queryfields.pop();
+            queryFields.pop();
             const fields = [];
-            queryfields.forEach((x) => {
+            queryFields.forEach((x) => {
                 if (typeof x === 'string') {
                     fields.push(new QueryField(x));
                 }
@@ -109,7 +109,7 @@ class MSSqlFormatter extends SqlFormatter {
         return util.format(' TODATETIMEOFFSET (%s,datepart(TZ,SYSDATETIMEOFFSET()))', this.escape(p0));
     }
     /**
-     * Escapes an object or a value and returns the equivalen sql value.
+     * Escapes an object or a value and returns the equivalent sql value.
      * @param {*} value
      * @param {boolean=} unquoted
      */
@@ -117,14 +117,14 @@ class MSSqlFormatter extends SqlFormatter {
         if (value === null || typeof value === 'undefined')
             return SqlUtils.escape(null);
         if (typeof value === 'string')
-            return '\'' + value.replace(/'/g, "''") + '\'';
+            return '\'' + value.replace(/'/g, '\'\'') + '\'';
         if (typeof value === 'boolean')
             return value ? '1' : '0';
         if (typeof value === 'object') {
             //add an exception for Date object
             if (value instanceof Date)
                 return this.escapeDate(value);
-            if (value.hasOwnProperty('$name'))
+            if (Object.prototype.hasOwnProperty.call(value, '$name'))
                 return this.escapeName(value.$name);
         }
         if (unquoted)
@@ -135,9 +135,9 @@ class MSSqlFormatter extends SqlFormatter {
     escapeName(name) {
         if (typeof name === 'string') {
             if (/^(\w+)\.(\w+)$/g.test(name)) {
-                return name.replace(/(\w+)/g, "[$1]");
+                return name.replace(/(\w+)/g, '[$1]');
             }
-            return name.replace(/(\w+)$|^(\w+)$/g, "[$1]");
+            return name.replace(/(\w+)$|^(\w+)$/g, '[$1]');
         }
         return name;
     }
@@ -155,7 +155,7 @@ class MSSqlFormatter extends SqlFormatter {
         const millisecond = zeroPad(val.getMilliseconds(), 3);
         //format timezone
         const offset = val.getTimezoneOffset(), timezone = (offset <= 0 ? '+' : '-') + zeroPad(-Math.floor(offset / 60), 2) + ':' + zeroPad(offset % 60, 2);
-        return "CONVERT(datetimeoffset,'" + year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second + "." + millisecond + timezone + "')";
+        return 'CONVERT(datetimeoffset,\'' + year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second + '.' + millisecond + timezone + '\')';
     }
     /**
      * Implements startsWith(a,b) expression formatter.
