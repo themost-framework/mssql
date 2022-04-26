@@ -3,22 +3,22 @@ const { QueryExpression } = require('@themost/query')
 const util = require('util');
 const ProductModel = require('./config/models/Product.json');
 const EmployeeModel = require('./config/models/Employee.json');
-// get options from environmet for testing
+// get options from environment for testing
 const testConnectionOptions = {
-    "server": process.env.MSSQL_SERVER,
-    "port": process.env.MSSQL_SERVER_PORT,
-    "user": process.env.MSSQL_USER,
-    "password": process.env.MSSQL_PASSWORD,
-    "database": "test_themost_dev"
+    'server': process.env.MSSQL_SERVER,
+    'port': process.env.MSSQL_SERVER_PORT,
+    'user': process.env.MSSQL_USER,
+    'password': process.env.MSSQL_PASSWORD,
+    'database': 'test_themost_dev'
 };
 
-// get options from environmet for testing
+// get options from environment for testing
 const masterConnectionOptions = {
-    "server": process.env.MSSQL_SERVER,
-    "port": process.env.MSSQL_SERVER_PORT,
-    "user": process.env.MSSQL_USER,
-    "password": process.env.MSSQL_PASSWORD,
-    "database": "master"
+    'server': process.env.MSSQL_SERVER,
+    'port': process.env.MSSQL_SERVER_PORT,
+    'user': process.env.MSSQL_USER,
+    'password': process.env.MSSQL_PASSWORD,
+    'database': 'master'
 };
 
 async function tryCreateTestDatabase() {
@@ -215,17 +215,17 @@ describe('MSSqlFormatter', () => {
 
     it('should use view(string).exists()', async () => {
         const adapter = new MSSqlAdapter(testConnectionOptions);
-        let exists = await adapter.view(`EmployeesView`).existsAsync();
+        let exists = await adapter.view('EmployeesView').existsAsync();
         expect(exists).toBeFalse();
 
         await adapter.table(EmployeeModel.source).create(EmployeeModel.fields);
 
-        await adapter.view(`EmployeesView`).createAsync(new QueryExpression().from('Employees').select('*'));
+        await adapter.view('EmployeesView').createAsync(new QueryExpression().from('Employees').select('*'));
 
-        exists = await adapter.view(`EmployeesView`).existsAsync();
+        exists = await adapter.view('EmployeesView').existsAsync();
         expect(exists).toBeTrue();
         // drop view
-        await adapter.view(`EmployeesView`).dropAsync();
+        await adapter.view('EmployeesView').dropAsync();
         // drop table
         await adapter.executeAsync(`DROP TABLE [${EmployeeModel.source}];`);
         await adapter.closeAsync();
@@ -265,7 +265,7 @@ describe('MSSqlFormatter', () => {
         exists = await adapter.table(ProductModel.source).existsAsync();
         expect(exists).toBeTrue();
         await adapter.indexes(ProductModel.source).createAsync('INDEX_Product_Name', [
-            "ProductName"
+            'ProductName'
         ]);
         const indexes = await adapter.indexes(ProductModel.source).listAsync();
         const findIndex = indexes.find((x) => x.name === 'INDEX_Product_Name');
@@ -286,7 +286,7 @@ describe('MSSqlFormatter', () => {
         exists = await adapter.table(ProductModel.source).existsAsync();
         expect(exists).toBeTrue();
         await adapter.indexes(ProductModel.source).createAsync('INDEX_Product_Name', [
-            "ProductName"
+            'ProductName'
         ]);
         let drop = await adapter.indexes(ProductModel.source).dropAsync('INDEX_Product_Name');
         expect(drop).toBe(1);
