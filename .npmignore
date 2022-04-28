@@ -1,11 +1,21 @@
-# development
+# test
 spec
-.github
-node_modules
 .env
+
+# babel
+babel.config.js
+
+# github
+.github
+
+# node
+node_modules
+
+# eslint
 .eslintrc
 .eslintignore
-# editors
+
+# ide
 .theia
 .vscode
 .idea
