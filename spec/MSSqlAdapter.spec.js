@@ -6,16 +6,16 @@ const EmployeeModel = require('./config/models/Employee.json');
 // get options from environment for testing
 const testConnectionOptions = {
     'server': process.env.MSSQL_SERVER,
-    'port': process.env.MSSQL_SERVER_PORT,
+    'port': parseInt(process.env.MSSQL_SERVER_PORT, 10),
     'user': process.env.MSSQL_USER,
     'password': process.env.MSSQL_PASSWORD,
-    'database': 'test_themost_dev'
+    'database': process.env.MSSQL_DB
 };
 
 // get options from environment for testing
 const masterConnectionOptions = {
     'server': process.env.MSSQL_SERVER,
-    'port': process.env.MSSQL_SERVER_PORT,
+    'port': parseInt(process.env.MSSQL_SERVER_PORT, 10),
     'user': process.env.MSSQL_USER,
     'password': process.env.MSSQL_PASSWORD,
     'database': 'master'
@@ -91,7 +91,7 @@ describe('MSSqlFormatter', () => {
         expect(adapter.rawConnection).toBeFalsy();
     });
 
-    it('should use database(string).exists()', async () => {
+    it('should query database', async () => {
         // validate and create database
         /**
          * @type {MSSqlAdapter}
@@ -109,7 +109,7 @@ describe('MSSqlFormatter', () => {
     });
 
     it('should use database(string).exists()', async () => {
-        const adapter = new MSSqlAdapter(testConnectionOptions);
+        const adapter = new MSSqlAdapter(masterConnectionOptions);
         let exists = await adapter.database(testConnectionOptions.database).existsAsync();
         expect(exists).toBeTrue();
         exists = await adapter.database('other_database').existsAsync();
@@ -118,7 +118,7 @@ describe('MSSqlFormatter', () => {
     });
 
     it('should use database(string).create()', async () => {
-        const adapter = new MSSqlAdapter(testConnectionOptions);
+        const adapter = new MSSqlAdapter(masterConnectionOptions);
         await adapter.database('test_create_a_database').createAsync();
         let exists = await adapter.database('test_create_a_database').existsAsync();
         expect(exists).toBeTrue();

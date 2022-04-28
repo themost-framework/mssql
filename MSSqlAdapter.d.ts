@@ -60,6 +60,7 @@ export declare interface MSSqlAdapterMigration {
 
 export declare class MSSqlAdapter {
     static formatType(field: any): string;
+    constructor(options?: any);
     formatType(field: any): string;
     open(callback: (err: Error) => void): void;
     close(callback: (err: Error) => void): void;

@@ -6,6 +6,7 @@
  * found in the LICENSE file at https://themost.io/license
  */
 const mssql = require('mssql');
+const {ConnectionPool} = require('mssql');
 const async = require('async');
 const util = require('util');
 const { TraceUtils } = require('@themost/common');
@@ -22,7 +23,7 @@ class MSSqlAdapter {
     constructor(options) {
         /**
          * @private
-         * @type {Connection}
+         * @type {ConnectionPool}
          */
         this.rawConnection = null;
         /**
@@ -58,19 +59,29 @@ class MSSqlAdapter {
     open(callback) {
         callback = callback || function () { };
         const self = this;
-        if (this.rawConnection) {
-            return callback.call(self);
+        if (self.rawConnection) {
+            return callback();
         }
         // clone connection options
-        const connectionOptions = Object.assign({}, self.options);
-        // create connection
-        self.rawConnection = new mssql.Connection(connectionOptions);
-        self.rawConnection.connect(function (err) {
-            if (err) {
-                self.rawConnection = null;
-                TraceUtils.log(err);
+        const connectionOptions = Object.assign({
+            options: {
+                encrypt: false,
+                trustServerCertificate: true
             }
-            callback.call(self, err);
+        }, self.options);
+        // create connection
+        const connection = new ConnectionPool(connectionOptions);
+        connection.connect(function(err) {
+            if (err) {
+                // destroy connection
+                self.rawConnection = null;
+                TraceUtils.error('An error occurred while connecting to database server');
+                TraceUtils.error(err);
+                return callback(err);
+            }
+            // set connection
+            self.rawConnection = connection;
+            return callback();
         });
     }
     /**
@@ -298,7 +309,7 @@ class MSSqlAdapter {
                 sql = query;
             }
             else {
-                //format query expression or any object that may be act as query expression
+                //format query expression or any object that may act as query expression
                 const formatter = new MSSqlFormatter();
                 sql = formatter.format(query);
             }
@@ -330,9 +341,14 @@ class MSSqlAdapter {
                         if (err) {
                             TraceUtils.log(util.format('SQL (Execution Error):%s, %s', err.message, preparedSql));
                         }
-                        if (typeof query.$insert === 'undefined')
-                            callback.bind(self)(err, result);
-                        else {
+                        if (typeof query.$insert === 'undefined') {
+                            if (result.recordsets.length === 1) {
+                                return callback(err, Array.from(result.recordset));
+                            }
+                            return callback(err, result.recordsets.map(function(recordset) {
+                                return Array.from(result.recordset);
+                            }));
+                        } else {
                             if (result) {
                                 if (result.length > 0)
                                     callback.bind(self)(err, { insertId: result[0].insertId });
@@ -385,6 +401,7 @@ class MSSqlAdapter {
 
     /**
      * @deprecated
+     * @param {string} format
      * @param {*} obj 
      */
     static format(format, obj) {
@@ -838,7 +855,7 @@ class MSSqlAdapter {
             }
             else {
                 async.waterfall([
-                    //1. Check migrations table existence
+                    //1. Check table existence
                     function (cb) {
                         self.table('migrations').exists(function (err, exists) {
                             if (err) {
