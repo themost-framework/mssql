@@ -28,7 +28,7 @@
   },
   "homepage": "https://github.com/themost-framework/themost-mssql",
   "dependencies": {
-    "async": "^1.4.2",
+    "async": "^2.6.4",
     "mssql": "1.3.0"
   },
   "peerDependencies": {
