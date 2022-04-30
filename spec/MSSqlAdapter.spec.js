@@ -1,6 +1,5 @@
-const { MSSqlAdapter, createInstance } = require('../index');
+const { MSSqlAdapter, createInstance } = require('@themost/mssql');
 const { QueryExpression } = require('@themost/query')
-const util = require('util');
 const ProductModel = require('./config/models/Product.json');
 const EmployeeModel = require('./config/models/Employee.json');
 // get options from environment for testing

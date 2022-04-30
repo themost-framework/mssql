@@ -1,4 +1,4 @@
-const {MSSqlFormatter} = require('../index');
+const {MSSqlFormatter} = require('@themost/mssql');
 
 describe('MSSqlFormatter', () => {
 

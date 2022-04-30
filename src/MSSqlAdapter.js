@@ -1,11 +1,11 @@
 // MOST Web Framework Codename Zero Gravity Copyright (c) 2017-2022, THEMOST LP All rights reserved
-const mssql = require('mssql');
-const {ConnectionPool} = require('mssql');
-const async = require('async');
-const util = require('util');
-const { TraceUtils } = require('@themost/common');
-const { SqlUtils } = require('@themost/query');
-const { MSSqlFormatter } = require('./MSSqlFormatter');
+import mssql from 'mssql';
+import {ConnectionPool} from 'mssql';
+import async from 'async';
+import util from 'util';
+import { TraceUtils } from '@themost/common';
+import { SqlUtils } from '@themost/query';
+import { MSSqlFormatter } from './MSSqlFormatter';
 /**
  * @class
  */

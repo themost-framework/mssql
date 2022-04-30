@@ -1,7 +1,7 @@
 // MOST Web Framework Codename Zero Gravity Copyright (c) 2017-2022, THEMOST LP All rights reserved
-const util = require('util');
-const { QueryField, SqlUtils, SqlFormatter, ObjectNameValidator } = require('@themost/query');
-const { Args } = require('@themost/common');
+import util from 'util';
+import { QueryField, SqlUtils, SqlFormatter, ObjectNameValidator } from '@themost/query';
+import { Args } from '@themost/common';
 
 function zeroPad(number, length) {
     number = number || 0;

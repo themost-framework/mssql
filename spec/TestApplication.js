@@ -1,5 +1,5 @@
 import {DataApplication, DataConfigurationStrategy, NamedDataContext} from '@themost/data';
-import { createInstance } from '../index';
+import { createInstance } from '@themost/mssql';
 import { QueryExpression } from '@themost/query';
 const testConnectionOptions = {
     'server': process.env.MSSQL_SERVER,
