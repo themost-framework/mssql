@@ -6,7 +6,8 @@
  * found in the LICENSE file at https://themost.io/license
  */
 const util = require('util');
-const { QueryField, SqlUtils, SqlFormatter } = require('@themost/query');
+const { QueryField, SqlUtils, SqlFormatter, ObjectNameValidator } = require('@themost/query');
+const { Args } = require('@themost/common');
 
 function zeroPad(number, length) {
     number = number || 0;
@@ -15,15 +16,6 @@ function zeroPad(number, length) {
         res = '0' + res;
     }
     return res;
-}
-
-class RowIndexField extends QueryField {
-    constructor(expression) {
-        this.expression = expression;
-    }
-    toString() {
-        return this.expression;
-    }
 }
 
 /**
@@ -56,8 +48,15 @@ class MSSqlFormatter extends SqlFormatter {
             const queryFields = obj.$select[keys[0]]
             const order = obj.$order;
             // format order expression
-            const orderExpression = order != null ? self.format(order, '%o') : 'ORDER BY (SELECT NULL)';
-            const rowIndex = new RowIndexField(`ROW_NUMBER() OVER(${orderExpression}) AS __RowIndex`);
+            const rowIndex = Object.assign(new QueryField(), {
+                // use alias
+                __RowIndex: {
+                    // use row index func
+                    $rowIndex: [
+                        order // set order or null
+                    ]
+                }
+            });
             queryFields.push(rowIndex);
             if (order)
                 delete obj.$order;
@@ -79,9 +78,9 @@ class MSSqlFormatter extends SqlFormatter {
                     fields.push(field.as() || field.getName());
                 }
             });
-            sql = util.format('SELECT %s FROM (%s) t0 WHERE __RowIndex BETWEEN %s AND %s', fields.map((x) => {
+            sql = util.format('SELECT %s FROM (%s) [t0] WHERE [__RowIndex] BETWEEN %s AND %s', fields.map((x) => {
                 return self.format(x, '%f');
-            }).join(', '), subQuery, obj.$skip + 1, obj.$skip + obj.$take);
+            }).join(', '), subQuery, parseInt(obj.$skip, 10) + 1, parseInt(obj.$skip, 10) + parseInt(obj.$take, 10));
         }
         return sql;
     }
@@ -146,13 +145,15 @@ class MSSqlFormatter extends SqlFormatter {
             return SqlUtils.escape(value);
     }
     escapeName(name) {
-        if (typeof name === 'string') {
-            if (/^(\w+)\.(\w+)$/g.test(name)) {
-                return name.replace(/(\w+)/g, '[$1]');
-            }
-            return name.replace(/(\w+)$|^(\w+)$/g, '[$1]');
+        Args.notString(name);
+        // exclude wildcard
+        if (name === '*') {
+            return name;
         }
-        return name;
+        // validate name
+        ObjectNameValidator.validator.test(name);
+        // and escape
+        return name.replace(/(\w+)/g, this.settings.nameFormat);
     }
     /**
      * @param {Date|*} val
@@ -216,6 +217,16 @@ class MSSqlFormatter extends SqlFormatter {
      */
     $trim(p0) {
         return util.format('LTRIM(RTRIM((%s)))', this.escape(p0));
+    }
+    /**
+     * @param {*=} order 
+     * @returns {string}
+     */
+    $rowIndex(order) {
+        if (order == null) {
+            return 'ROW_NUMBER() OVER(ORDER BY (SELECT NULL))';
+        }
+        return util.format('ROW_NUMBER() OVER(%s)', this.format(order, '%o'));
     }
 }
 

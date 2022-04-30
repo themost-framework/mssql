@@ -10,7 +10,7 @@ const {ConnectionPool} = require('mssql');
 const async = require('async');
 const util = require('util');
 const { TraceUtils } = require('@themost/common');
-const { QueryExpression, SqlUtils } = require('@themost/query');
+const { QueryExpression, SqlUtils, QueryField } = require('@themost/query');
 const { MSSqlFormatter } = require('./MSSqlFormatter');
 /**
  * @class
@@ -335,18 +335,19 @@ class MSSqlAdapter {
                     if (typeof query.$insert !== 'undefined')
                         preparedSql += ';SELECT SCOPE_IDENTITY() as insertId';
                     request.query(preparedSql, function (err, result) {
-                        if (process.env.NODE_ENV === 'development') {
-                            TraceUtils.log(util.format('SQL (Execution Time:%sms):%s, Parameters:%s', (new Date()).getTime() - startTime, sql, JSON.stringify(values)));
-                        }
                         if (err) {
-                            TraceUtils.log(util.format('SQL (Execution Error):%s, %s', err.message, preparedSql));
+                            TraceUtils.error(`SQL (Execution Error):${err.message}, ${preparedSql}`);
+                            return callback(err);
+                        }
+                        if (process.env.NODE_ENV === 'development') {
+                            TraceUtils.debug(util.format('SQL (Execution Time:%sms):%s, Parameters:%s', (new Date()).getTime() - startTime, sql, JSON.stringify(values)));
                         }
                         if (typeof query.$insert === 'undefined') {
                             if (result.recordsets.length === 1) {
                                 return callback(err, Array.from(result.recordset));
                             }
                             return callback(err, result.recordsets.map(function(recordset) {
-                                return Array.from(result.recordset);
+                                return Array.from(recordset);
                             }));
                         } else {
                             if (result) {
@@ -1052,10 +1053,11 @@ class MSSqlAdapter {
         }
         return {
             exists: function (callback) {
-                const query = new QueryExpression().from('sys.databases').where('name').equal(db)
-                    .and('SCHEMA_NAME(owner_sid)').equal(owner)
-                    .select('name');
-                self.execute(query, null, (err, res) => {
+                self.execute('SELECT [name] FROM [sys].[databases] WHERE ([name]=? AND SCHEMA_NAME([owner_sid])=?)',
+                    [
+                        db,
+                        owner
+                    ], (err, res) => {
                     if (err) {
                         return callback(err);
                     }
@@ -1073,17 +1075,18 @@ class MSSqlAdapter {
                 });
             },
             create: function (callback) {
-                const query = new QueryExpression().from('sys.databases').where('name').equal(db)
-                    .and('SCHEMA_NAME(owner_sid)').equal(owner)
-                    .select('name');
-                self.execute(query, null, (err, res) => {
+                const formatter = new MSSqlFormatter();
+                self.execute('SELECT [name] FROM [sys].[databases] WHERE ([name]=? AND SCHEMA_NAME([owner_sid])=?)', [
+                    db,
+                    owner
+                ], (err, res) => {
                     if (err) {
                         return callback(err);
                     }
                     if (res.length === 1) {
                         return callback();
                     }
-                    return self.execute(`CREATE DATABASE ${db}`, null, (err) => {
+                    return self.execute(`CREATE DATABASE ${formatter.escapeName(db)}`, null, (err) => {
                         if (err) {
                             return callback(err);
                         }
