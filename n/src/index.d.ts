@@ -1,4 +1,4 @@
-import { MSSqlAdapter } from "../MSSqlAdapter";
+import { MSSqlAdapter } from '@themost/mssql';
 
 export declare class MSSqlAdapter2 extends MSSqlAdapter {
     constructor(options: any);
