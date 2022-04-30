@@ -5,6 +5,9 @@ spec
 # babel
 babel.config.js
 
+# rollup
+rollup.config.js
+
 # github
 .github
 
@@ -20,3 +23,6 @@ node_modules
 .vscode
 .idea
 .DS_Store
+
+# typescript
+tsconfig.json
