@@ -104,10 +104,6 @@ describe('MSSqlFormatter', () => {
         await adapter.closeAsync();
     });
 
-    it('should use migrate()', async () => {
-        const adapter = new MSSqlAdapter(testConnectionOptions);
-    });
-
     it('should use database(string).exists()', async () => {
         const adapter = new MSSqlAdapter(masterConnectionOptions);
         let exists = await adapter.database(testConnectionOptions.database).existsAsync();
