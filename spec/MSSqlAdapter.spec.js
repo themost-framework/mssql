@@ -171,12 +171,12 @@ describe('MSSqlFormatter', () => {
         });
         await Promise.all(sources);
         const query = new QueryExpression().from(EmployeeModel.source)
-            .where('LastName').equal('Davolio')
+            .where('lastName').equal('Davolio')
             .select('*');
         let res = await adapter.executeAsync(query);
         expect(res).toBeInstanceOf(Array);
         expect(res.length).toBe(1);
-        expect(res[0].LastName).toBe('Davolio')
+        expect(res[0].lastName).toBe('Davolio')
         // drop table
         await adapter.executeAsync(`DROP TABLE [${EmployeeModel.source}];`);
         await adapter.closeAsync();
@@ -196,17 +196,17 @@ describe('MSSqlFormatter', () => {
         await Promise.all(sources);
         const updateQuery = new QueryExpression().update(EmployeeModel.source)
             .set({
-                LastName: 'Davolio-Arnold'
+                lastName: 'Davolio-Arnold'
             })
-            .where('LastName').equal('Davolio');
+            .where('lastName').equal('Davolio');
         await adapter.executeAsync(updateQuery);
         const query = new QueryExpression().from(EmployeeModel.source)
-            .where('LastName').equal('Davolio-Arnold')
+            .where('lastName').equal('Davolio-Arnold')
             .select('*');
         let res = await adapter.executeAsync(query);
         expect(res).toBeInstanceOf(Array);
         expect(res.length).toBe(1);
-        expect(res[0].LastName).toBe('Davolio-Arnold');
+        expect(res[0].lastName).toBe('Davolio-Arnold');
         // drop table
         await adapter.executeAsync(`DROP TABLE [${EmployeeModel.source}];`);
         await adapter.closeAsync();
@@ -215,17 +215,17 @@ describe('MSSqlFormatter', () => {
 
     it('should use view(string).exists()', async () => {
         const adapter = new MSSqlAdapter(testConnectionOptions);
-        let exists = await adapter.view('EmployeesView').existsAsync();
+        let exists = await adapter.view('EmployeeData').existsAsync();
         expect(exists).toBeFalse();
 
         await adapter.table(EmployeeModel.source).create(EmployeeModel.fields);
 
-        await adapter.view('EmployeesView').createAsync(new QueryExpression().from('Employees').select('*'));
+        await adapter.view('EmployeeData').createAsync(new QueryExpression().from('EmployeeBase').select('*'));
 
-        exists = await adapter.view('EmployeesView').existsAsync();
+        exists = await adapter.view('EmployeeData').existsAsync();
         expect(exists).toBeTrue();
         // drop view
-        await adapter.view('EmployeesView').dropAsync();
+        await adapter.view('EmployeeData').dropAsync();
         // drop table
         await adapter.executeAsync(`DROP TABLE [${EmployeeModel.source}];`);
         await adapter.closeAsync();
@@ -248,7 +248,7 @@ describe('MSSqlFormatter', () => {
         // get index 0
         const index0 = indexes[0];
         expect(index0).toBeTruthy();
-        expect(index0.columns[0]).toBe('ProductID');
+        expect(index0.columns[0]).toBe('id');
         // drop table
         await adapter.executeAsync(`DROP TABLE [${ProductModel.source}];`);
         await adapter.closeAsync();
@@ -265,7 +265,7 @@ describe('MSSqlFormatter', () => {
         exists = await adapter.table(ProductModel.source).existsAsync();
         expect(exists).toBeTrue();
         await adapter.indexes(ProductModel.source).createAsync('INDEX_Product_Name', [
-            'ProductName'
+            'name'
         ]);
         const indexes = await adapter.indexes(ProductModel.source).listAsync();
         const findIndex = indexes.find((x) => x.name === 'INDEX_Product_Name');
@@ -286,7 +286,7 @@ describe('MSSqlFormatter', () => {
         exists = await adapter.table(ProductModel.source).existsAsync();
         expect(exists).toBeTrue();
         await adapter.indexes(ProductModel.source).createAsync('INDEX_Product_Name', [
-            'ProductName'
+            'name'
         ]);
         let drop = await adapter.indexes(ProductModel.source).dropAsync('INDEX_Product_Name');
         expect(drop).toBe(1);
