@@ -40,12 +40,15 @@
     "@babel/eslint-parser": "^7.17.0",
     "@babel/preset-env": "^7.16.11",
     "@babel/register": "^7.17.7",
+    "@themost/data": "^2.6.31",
+    "@themost/xml": "^2.5.2",
     "@types/async": "^3.2.12",
     "@types/jasmine": "^3.5.14",
     "@types/mssql": "^7.1.5",
     "dotenv": "^8.2.0",
     "eslint": "^8.14.0",
     "jasmine": "^4.1.0",
-    "jasmine-spec-reporter": "^7.0.0"
+    "jasmine-spec-reporter": "^7.0.0",
+    "module-alias": "^2.2.2"
   }
 }
