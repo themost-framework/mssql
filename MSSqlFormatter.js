@@ -17,6 +17,15 @@ function zeroPad(number, length) {
     return res;
 }
 
+class RowIndexField extends QueryField {
+    constructor(expression) {
+        this.expression = expression;
+    }
+    toString() {
+        return this.expression;
+    }
+}
+
 /**
  * @class
  * @augments {SqlFormatter}
@@ -44,8 +53,12 @@ class MSSqlFormatter extends SqlFormatter {
             const keys = Object.keys(obj.$select);
             if (keys.length === 0)
                 throw new Error('Entity is missing');
-            const queryFields = obj.$select[keys[0]], order = obj.$order;
-            queryFields.push(util.format('ROW_NUMBER() OVER(%s) AS __RowIndex', order ? self.format(order, '%o') : 'ORDER BY (SELECT NULL)'));
+            const queryFields = obj.$select[keys[0]]
+            const order = obj.$order;
+            // format order expression
+            const orderExpression = order != null ? self.format(order, '%o') : 'ORDER BY (SELECT NULL)';
+            const rowIndex = new RowIndexField(`ROW_NUMBER() OVER(${orderExpression}) AS __RowIndex`);
+            queryFields.push(rowIndex);
             if (order)
                 delete obj.$order;
             const subQuery = self.formatSelect(obj);
