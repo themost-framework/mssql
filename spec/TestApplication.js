@@ -57,6 +57,19 @@ class TestApplication extends DataApplication {
         await context.db.closeAsync();
     }
 
+    /**
+     * @param {function(context:DataContext):Promise<void>} func 
+     */
+    async runInContext(func) {
+        const context = this.createContext();
+        try {
+            await func(context);
+        } catch (err) {
+            await context.finalizeAsync();
+            throw err;
+        }
+    }
+
 }
 
 export {
