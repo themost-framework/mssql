@@ -1,4 +1,5 @@
-import {DataApplication, DataConfigurationStrategy, NamedDataContext} from '@themost/data';
+// eslint-disable-next-line no-unused-vars
+import {DataApplication, DataConfigurationStrategy, NamedDataContext, DataCacheStrategy, DataContext} from '@themost/data';
 import { createInstance } from '@themost/mssql';
 import { QueryExpression } from '@themost/query';
 const testConnectionOptions = {
@@ -16,6 +17,18 @@ const masterConnectionOptions = {
     'password': process.env.MSSQL_PASSWORD,
     'database': 'master'
 };
+
+class CancelTransactionError extends Error {
+    constructor() {
+        super();
+    }
+}
+
+/**
+ * @callback TestContextFunction
+ * @param {DataContext} context
+ * @returns {Promise<void>}
+*/
 
 class TestApplication extends DataApplication {
     constructor(cwd) {
@@ -57,10 +70,17 @@ class TestApplication extends DataApplication {
         await context.db.closeAsync();
     }
 
+    async finalize() {
+        const service = this.getConfiguration().getStrategy(DataCacheStrategy);
+        if (typeof service.finalize === 'function') {
+            await service.finalize();
+        }
+    }
+
     /**
-     * @param {function(context:DataContext):Promise<void>} func 
+     * @param {TestContextFunction} func 
      */
-    async runInContext(func) {
+    async executeInTestContext(func) {
         const context = this.createContext();
         try {
             await func(context);
@@ -68,6 +88,51 @@ class TestApplication extends DataApplication {
             await context.finalizeAsync();
             throw err;
         }
+    }
+
+    /**
+     * @param {TestContextFunction} func 
+     * @returns {Promise<void>}
+     */
+    executeInTestTranscaction(func) {
+        return this.executeInTestContext((context) => {
+            return new Promise((resolve, reject) => {
+                // start transaction
+                context = this.createContext();
+                // clear cache
+                const configuration = context.getConfiguration();
+                Object.defineProperty(configuration, 'cache', {
+                    configurable: true,
+                    enumerable: true,
+                    writable: true,
+                    value: { }
+                });
+                context.db.executeInTransaction((cb) => {
+                    try {
+                        func(context).then(() => {
+                            return cb(new CancelTransactionError());
+                        }).catch( (err) => {
+                            return cb(err);
+                        });
+                    }
+                    catch (err) {
+                        return cb(err);
+                    }
+                }, (err) => {
+                    // if error is an instance of CancelTransactionError
+                    if (err && err instanceof CancelTransactionError) {
+                        return resolve();
+                    }
+                    if (err) {
+                        return reject(err);
+                    }
+                    // exit
+                    return resolve();
+                });
+            });
+        });
+
+        
     }
 
 }

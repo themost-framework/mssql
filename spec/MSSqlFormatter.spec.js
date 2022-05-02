@@ -15,6 +15,10 @@ describe('MSSqlFormatter', () => {
         await app.tryCreateDatabase();
     });
 
+    afterAll(async () => {
+        await app.finalize();
+    })
+
     it('should create instance', async () => {
         const formatter = new MSSqlFormatter();
         expect(formatter).toBeTruthy();
@@ -35,13 +39,39 @@ describe('MSSqlFormatter', () => {
     });
 
     it('should should use limit select', async () => {
-        await app.runInContext(async (context) => {
+        await app.executeInTestContext(async (context) => {
             const items = await context.model('Person').asQueryable()
-                .orderBy('familyName')
-                .thenBy('givenName')
-                .take(10).silent().getItems();
+                .orderBy('id')
+                .take(5).silent().getItems();
             expect(items).toBeInstanceOf(Array);
-            expect(items.length).toBe(10);
+            expect(items.length).toBe(5);
+            const moreItems = await context.model('Person').asQueryable()
+                .orderBy('id')
+                .take(1).skip(5).silent().getItems();
+            expect(moreItems.length).toBe(1);
+            const nextItem = moreItems[0];
+            for (const item of items) {
+                expect(nextItem.id).toBeGreaterThan(item.id);
+            }
+        });        
+    });
+
+    it('should use insert', async () => {
+        await app.executeInTestTranscaction(async (context) => {
+
+            const insertUser = {
+                name: 'user1@example.com',
+                description: 'Test User',
+                groups: [
+                    {
+                        name: 'Users'
+                    }
+                ]
+            };
+            await context.model('User').silent().insert(insertUser);
+            let newUser = await context.model('User').where('name').equal('user1@example.com').silent().getItem();
+            expect(newUser).toBeTruthy();
+            expect(newUser.id).toEqual(insertUser.id);
         });
     });
 
