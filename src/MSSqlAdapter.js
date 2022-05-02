@@ -6,6 +6,7 @@ import util from 'util';
 import { TraceUtils } from '@themost/common';
 import { SqlUtils } from '@themost/query';
 import { MSSqlFormatter } from './MSSqlFormatter';
+
 /**
  * @class
  */
@@ -318,12 +319,12 @@ class MSSqlAdapter {
                     callback.call(self, err);
                 }
                 else {
-                    //log statement (optional)
+                    // log statement (optional)
                     let startTime;
                     if (process.env.NODE_ENV === 'development') {
                         startTime = new Date().getTime();
                     }
-                    //execute raw command
+                    // execute raw command
                     const request = self.transaction ? new mssql.Request(self.transaction) : new mssql.Request(self.rawConnection);
                     let preparedSql = self.prepare(sql, values);
                     if (typeof query.$insert !== 'undefined')
@@ -344,15 +345,15 @@ class MSSqlAdapter {
                                 return Array.from(recordset);
                             }));
                         } else {
-                            if (result) {
-                                if (result.length > 0)
-                                    callback.bind(self)(err, { insertId: result[0].insertId });
-                                else
-                                    callback.bind(self)(err, result);
+                            if (result && result.recordset) {
+                                const insertId = result.recordset[0] && result.recordset[0].insertId;
+                                if (insertId != null) {
+                                    return callback(err, {
+                                        insertId
+                                    });
+                                }
                             }
-                            else {
-                                callback.bind(self)(err, result);
-                            }
+                            return callback(err, result);
                         }
                     });
                 }
@@ -1122,11 +1123,12 @@ class MSSqlAdapter {
                 INNER JOIN 
                     sys.columns col ON [ic].[object_id] = [col].[object_id] and [ic].[column_id] = [col].[column_id]
                     WHERE col.[object_id] =  OBJECT_ID('${table}') ORDER BY [ind].[index_id], [col].[column_id]`;
-
-                Promise.all([
-                    self.executeAsync(sqlIndexes, null),
-                    self.executeAsync(sqlIndexColumns, null)
-                ]).then((results) => {
+                    (async () => {
+                        const results = [];
+                        results.push(await self.executeAsync(sqlIndexes, null));
+                        results.push(await self.executeAsync(sqlIndexColumns, null));
+                        return results;
+                    })().then((results) => {
                     const indexes = results[0].map(function (x) {
                         return {
                             name: x.name,
