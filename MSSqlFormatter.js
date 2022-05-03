@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://themost.io/license
  */
 const util = require('util');
-const { QueryField, QueryUtils, SqlUtils, SqlFormatter } = require('@themost/query');
+const { QueryField, QueryUtils, SqlUtils, SqlFormatter, ObjectNameValidator } = require('@themost/query');
 
 function zeroPad(number, length) {
     number = number || 0;
@@ -133,13 +133,19 @@ class MSSqlFormatter extends SqlFormatter {
             return SqlUtils.escape(value);
     }
     escapeName(name) {
-        if (typeof name === 'string') {
-            if (/^(\w+)\.(\w+)$/g.test(name)) {
-                return name.replace(/(\w+)/g, "[$1]");
-            }
-            return name.replace(/(\w+)$|^(\w+)$/g, "[$1]");
+        // check name object
+        if (typeof name === 'object' && Object.prototype.hasOwnProperty.call(name, '$name')) {
+            return this.escapeName(name.$name); 
         }
-        return name;
+        // throw error for unexpected type
+        if (typeof name !== 'string') {
+            throw new Error('Invalid name expression. Expected string.');
+        }
+        // exclude wildcard ( * or .*)
+        if (/^\*$/g.test(name) || /\.\*$/g.test(name)) {
+            return name.replace(new RegExp(ObjectNameValidator.validator.pattern.source, 'g'), this.settings.nameFormat);
+        }
+        return ObjectNameValidator.validator.escape(name, this.settings.nameFormat);
     }
     /**
      * @param {Date|*} val
