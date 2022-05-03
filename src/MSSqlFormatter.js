@@ -140,9 +140,9 @@ class MSSqlFormatter extends SqlFormatter {
     }
     escapeName(name) {
         Args.notString(name);
-        // exclude wildcard
-        if (name === '*') {
-            return name;
+        // exclude wildcard ( * or .*)
+        if (/^\*$/ig.test(name) || /\.\*$/ig.test(name)) {
+            return name.replace(/(\w+)/g, this.settings.nameFormat);
         }
         // validate name
         ObjectNameValidator.validator.test(name);
