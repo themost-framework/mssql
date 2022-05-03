@@ -15,6 +15,7 @@
       "after": false,
       "afterAll": false,
       "expect": false,
+      "expectAsync": false,
       "spyOn": false,
       "jasmine":false
     },
