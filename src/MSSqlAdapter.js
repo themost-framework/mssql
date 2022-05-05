@@ -1,16 +1,12 @@
-/**
- * MOST Web Framework 2.0 Codename Blueshift
- * Copyright (c) 2014-2020, THEMOST LP themost-framework@themost.io
- *
- * Use of this source code is governed by an BSD-3-Clause license that can be
- * found in the LICENSE file at https://themost.io/license
- */
-const mssql = require('mssql');
-const async = require('async');
-const util = require('util');
-const { TraceUtils } = require('@themost/common');
-const { QueryExpression, SqlUtils } = require('@themost/query');
-const { MSSqlFormatter } = require('./MSSqlFormatter');
+// MOST Web Framework Codename Zero Gravity Copyright (c) 2017-2022, THEMOST LP All rights reserved
+import mssql from 'mssql';
+import {ConnectionPool} from 'mssql';
+import async from 'async';
+import util from 'util';
+import { TraceUtils } from '@themost/common';
+import { SqlUtils } from '@themost/query';
+import { MSSqlFormatter } from './MSSqlFormatter';
+
 /**
  * @class
  */
@@ -22,7 +18,7 @@ class MSSqlAdapter {
     constructor(options) {
         /**
          * @private
-         * @type {Connection}
+         * @type {ConnectionPool}
          */
         this.rawConnection = null;
         /**
@@ -58,19 +54,29 @@ class MSSqlAdapter {
     open(callback) {
         callback = callback || function () { };
         const self = this;
-        if (this.rawConnection) {
-            return callback.call(self);
+        if (self.rawConnection) {
+            return callback();
         }
         // clone connection options
-        const connectionOptions = Object.assign({}, self.options);
-        // create connection
-        self.rawConnection = new mssql.Connection(connectionOptions);
-        self.rawConnection.connect(function (err) {
-            if (err) {
-                self.rawConnection = null;
-                TraceUtils.log(err);
+        const connectionOptions = Object.assign({
+            options: {
+                encrypt: false,
+                trustServerCertificate: true
             }
-            callback.call(self, err);
+        }, self.options);
+        // create connection
+        const connection = new ConnectionPool(connectionOptions);
+        connection.connect(function(err) {
+            if (err) {
+                // destroy connection
+                self.rawConnection = null;
+                TraceUtils.error('An error occurred while connecting to database server');
+                TraceUtils.error(err);
+                return callback(err);
+            }
+            // set connection
+            self.rawConnection = connection;
+            return callback();
         });
     }
     /**
@@ -233,15 +239,15 @@ class MSSqlAdapter {
         const db = inTransaction ? new MSSqlAdapter(this.options) : this;
         // create migration schema
         const migration = {
-            "appliesTo": "increment_id",
-            "model": "increments",
-            "version": "1.0",
-            "description": "Increments migration (version 1.0)",
-            "add": [
-                { "name": "id", "type": "Counter", "primary": true },
-                { "name": "entity", "type": "Text", "size": 120 },
-                { "name": "attribute", "type": "Text", "size": 120 },
-                { "name": "value", "type": "Integer" }
+            'appliesTo': 'increment_id',
+            'model': 'increments',
+            'version': '1.0',
+            'description': 'Increments migration (version 1.0)',
+            'add': [
+                { 'name': 'id', 'type': 'Counter', 'primary': true },
+                { 'name': 'entity', 'type': 'Text', 'size': 120 },
+                { 'name': 'attribute', 'type': 'Text', 'size': 120 },
+                { 'name': 'value', 'type': 'Integer' }
             ]
         };
         //ensure increments entity
@@ -298,7 +304,7 @@ class MSSqlAdapter {
                 sql = query;
             }
             else {
-                //format query expression or any object that may be act as query expression
+                //format query expression or any object that may act as query expression
                 const formatter = new MSSqlFormatter();
                 sql = formatter.format(query);
             }
@@ -313,35 +319,41 @@ class MSSqlAdapter {
                     callback.call(self, err);
                 }
                 else {
-                    //log statement (optional)
+                    // log statement (optional)
                     let startTime;
                     if (process.env.NODE_ENV === 'development') {
                         startTime = new Date().getTime();
                     }
-                    //execute raw command
+                    // execute raw command
                     const request = self.transaction ? new mssql.Request(self.transaction) : new mssql.Request(self.rawConnection);
                     let preparedSql = self.prepare(sql, values);
                     if (typeof query.$insert !== 'undefined')
                         preparedSql += ';SELECT SCOPE_IDENTITY() as insertId';
                     request.query(preparedSql, function (err, result) {
-                        if (process.env.NODE_ENV === 'development') {
-                            TraceUtils.log(util.format('SQL (Execution Time:%sms):%s, Parameters:%s', (new Date()).getTime() - startTime, sql, JSON.stringify(values)));
-                        }
                         if (err) {
-                            TraceUtils.log(util.format('SQL (Execution Error):%s, %s', err.message, preparedSql));
+                            TraceUtils.error(`SQL (Execution Error):${err.message}, ${preparedSql}`);
+                            return callback(err);
                         }
-                        if (typeof query.$insert === 'undefined')
-                            callback.bind(self)(err, result);
-                        else {
-                            if (result) {
-                                if (result.length > 0)
-                                    callback.bind(self)(err, { insertId: result[0].insertId });
-                                else
-                                    callback.bind(self)(err, result);
+                        if (process.env.NODE_ENV === 'development') {
+                            TraceUtils.debug(util.format('SQL (Execution Time:%sms):%s, Parameters:%s', (new Date()).getTime() - startTime, sql, JSON.stringify(values)));
+                        }
+                        if (typeof query.$insert === 'undefined') {
+                            if (result.recordsets.length === 1) {
+                                return callback(err, Array.from(result.recordset));
                             }
-                            else {
-                                callback.bind(self)(err, result);
+                            return callback(err, result.recordsets.map(function(recordset) {
+                                return Array.from(recordset);
+                            }));
+                        } else {
+                            if (result && result.recordset) {
+                                const insertId = result.recordset[0] && result.recordset[0].insertId;
+                                if (insertId != null) {
+                                    return callback(err, {
+                                        insertId
+                                    });
+                                }
                             }
+                            return callback(err, result);
                         }
                     });
                 }
@@ -385,6 +397,7 @@ class MSSqlAdapter {
 
     /**
      * @deprecated
+     * @param {string} format
      * @param {*} obj 
      */
     static format(format, obj) {
@@ -557,12 +570,12 @@ class MSSqlAdapter {
              */
             columns: function (callback) {
                 callback = callback || function () { };
-                self.execute("SELECT c0.[name] AS [name], c0.[isnullable] AS [nullable], c0.[length] AS [size], c0.[prec] AS [precision], " +
-                    "c0.[scale] AS [scale], t0.[name] AS type, t0.[name] + CASE WHEN t0.[variable]=0 THEN '' ELSE '(' + CONVERT(varchar,c0.[length]) + ')' END AS [type1], " +
-                    "CASE WHEN p0.[indid]>0 THEN 1 ELSE 0 END [primary] FROM syscolumns c0  INNER JOIN systypes t0 ON c0.[xusertype] = t0.[xusertype] " +
-                    "INNER JOIN  sysobjects s0 ON c0.[id]=s0.[id]  LEFT JOIN (SELECT k0.* FROM sysindexkeys k0 INNER JOIN (SELECT i0.* FROM sysindexes i0 " +
-                    "INNER JOIN sysobjects s0 ON i0.[id]=s0.[id]  WHERE i0.[status]=2066) x0  ON k0.[id]=x0.[id] AND k0.[indid]=x0.[indid] ) p0 ON c0.[id]=p0.[id] " +
-                    "AND c0.[colid]=p0.[colid]  WHERE s0.[name]=? AND s0.[xtype]='U' AND SCHEMA_NAME(s0.[uid])=?", [table, owner], function (err, result) {
+                self.execute('SELECT c0.[name] AS [name], c0.[isnullable] AS [nullable], c0.[length] AS [size], c0.[prec] AS [precision], ' +
+                    'c0.[scale] AS [scale], t0.[name] AS type, t0.[name] + CASE WHEN t0.[variable]=0 THEN \'\' ELSE \'(\' + CONVERT(varchar,c0.[length]) + \')\' END AS [type1], ' +
+                    'CASE WHEN p0.[indid]>0 THEN 1 ELSE 0 END [primary] FROM syscolumns c0  INNER JOIN systypes t0 ON c0.[xusertype] = t0.[xusertype] ' +
+                    'INNER JOIN  sysobjects s0 ON c0.[id]=s0.[id]  LEFT JOIN (SELECT k0.* FROM sysindexkeys k0 INNER JOIN (SELECT i0.* FROM sysindexes i0 ' +
+                    'INNER JOIN sysobjects s0 ON i0.[id]=s0.[id]  WHERE i0.[status]=2066) x0  ON k0.[id]=x0.[id] AND k0.[indid]=x0.[indid] ) p0 ON c0.[id]=p0.[id] ' +
+                    'AND c0.[colid]=p0.[colid]  WHERE s0.[name]=? AND s0.[xtype]=\'U\' AND SCHEMA_NAME(s0.[uid])=?', [table, owner], function (err, result) {
                         if (err) {
                             return callback(err);
                         }
@@ -797,7 +810,7 @@ class MSSqlAdapter {
                         }
                         try {
                             const formatter = new MSSqlFormatter();
-                            const sql = "EXECUTE('" + util.format('CREATE VIEW %s.%s AS ', formatter.escapeName(owner), formatter.escapeName(view)) + formatter.format(q) + "')";
+                            const sql = 'EXECUTE(\'' + util.format('CREATE VIEW %s.%s AS ', formatter.escapeName(owner), formatter.escapeName(view)) + formatter.format(q) + '\')';
                             self.execute(sql, [], tr);
                         }
                         catch (e) {
@@ -831,14 +844,14 @@ class MSSqlAdapter {
         const self = this;
         const migration = obj;
         if (migration.appliesTo == null)
-            throw new Error("Invalid argument. Model name is undefined.");
+            throw new Error('Invalid argument. Model name is undefined.');
         self.open(function (err) {
             if (err) {
                 callback.bind(self)(err);
             }
             else {
                 async.waterfall([
-                    //1. Check migrations table existence
+                    //1. Check table existence
                     function (cb) {
                         self.table('migrations').exists(function (err, exists) {
                             if (err) {
@@ -1035,10 +1048,11 @@ class MSSqlAdapter {
         }
         return {
             exists: function (callback) {
-                const query = new QueryExpression().from('sys.databases').where('name').equal(db)
-                    .and('SCHEMA_NAME(owner_sid)').equal(owner)
-                    .select('name');
-                self.execute(query, null, (err, res) => {
+                self.execute('SELECT [name] FROM [sys].[databases] WHERE ([name]=? AND SCHEMA_NAME([owner_sid])=?)',
+                    [
+                        db,
+                        owner
+                    ], (err, res) => {
                     if (err) {
                         return callback(err);
                     }
@@ -1056,17 +1070,18 @@ class MSSqlAdapter {
                 });
             },
             create: function (callback) {
-                const query = new QueryExpression().from('sys.databases').where('name').equal(db)
-                    .and('SCHEMA_NAME(owner_sid)').equal(owner)
-                    .select('name');
-                self.execute(query, null, (err, res) => {
+                const formatter = new MSSqlFormatter();
+                self.execute('SELECT [name] FROM [sys].[databases] WHERE ([name]=? AND SCHEMA_NAME([owner_sid])=?)', [
+                    db,
+                    owner
+                ], (err, res) => {
                     if (err) {
                         return callback(err);
                     }
                     if (res.length === 1) {
                         return callback();
                     }
-                    return self.execute(`CREATE DATABASE ${db}`, null, (err) => {
+                    return self.execute(`CREATE DATABASE ${formatter.escapeName(db)}`, null, (err) => {
                         if (err) {
                             return callback(err);
                         }
@@ -1108,11 +1123,12 @@ class MSSqlAdapter {
                 INNER JOIN 
                     sys.columns col ON [ic].[object_id] = [col].[object_id] and [ic].[column_id] = [col].[column_id]
                     WHERE col.[object_id] =  OBJECT_ID('${table}') ORDER BY [ind].[index_id], [col].[column_id]`;
-
-                Promise.all([
-                    self.executeAsync(sqlIndexes, null),
-                    self.executeAsync(sqlIndexColumns, null)
-                ]).then((results) => {
+                    (async () => {
+                        const results = [];
+                        results.push(await self.executeAsync(sqlIndexes, null));
+                        results.push(await self.executeAsync(sqlIndexColumns, null));
+                        return results;
+                    })().then((results) => {
                     const indexes = results[0].map(function (x) {
                         return {
                             name: x.name,
@@ -1256,6 +1272,6 @@ class MSSqlAdapter {
 
 }
 
-module.exports = {
+export {
     MSSqlAdapter
 };

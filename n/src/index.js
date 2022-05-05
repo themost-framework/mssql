@@ -1,4 +1,4 @@
-const { MSSqlAdapter } = require('../MSSqlAdapter');
+import { MSSqlAdapter } from '@themost/mssql';
 
 class MSSqlAdapter2 extends MSSqlAdapter {
     /**
@@ -27,13 +27,13 @@ class MSSqlAdapter2 extends MSSqlAdapter {
 /**
  * Creates an instance of MSSqlAdapter object that represents a MSSQL database connection.
  * @param {*} options An object that represents the properties of the underlying database connection.
- * @returns {DataAdapter}
+ * @returns {MSSqlAdapter2}
  */
 function createInstance(options) {
     return new MSSqlAdapter2(options);
 }
 
-module.exports = {
+export {
     MSSqlAdapter2,
     createInstance
 };

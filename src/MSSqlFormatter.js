@@ -1,12 +1,6 @@
-/**
- * MOST Web Framework 2.0 Codename Blueshift
- * Copyright (c) 2014-2020, THEMOST LP themost-framework@themost.io
- *
- * Use of this source code is governed by an BSD-3-Clause license that can be
- * found in the LICENSE file at https://themost.io/license
- */
-const util = require('util');
-const { QueryField, QueryUtils, SqlUtils, SqlFormatter, ObjectNameValidator } = require('@themost/query');
+// MOST Web Framework Codename Zero Gravity Copyright (c) 2017-2022, THEMOST LP All rights reserved
+import util from 'util';
+import { QueryField, SqlUtils, SqlFormatter } from '@themost/query';
 
 function zeroPad(number, length) {
     number = number || 0;
@@ -44,17 +38,28 @@ class MSSqlFormatter extends SqlFormatter {
             const keys = Object.keys(obj.$select);
             if (keys.length === 0)
                 throw new Error('Entity is missing');
-            const queryfields = obj.$select[keys[0]], order = obj.$order;
-            queryfields.push(util.format('ROW_NUMBER() OVER(%s) AS __RowIndex', order ? self.format(order, '%o') : 'ORDER BY (SELECT NULL)'));
+            const queryFields = obj.$select[keys[0]]
+            const order = obj.$order;
+            // format order expression
+            const rowIndex = Object.assign(new QueryField(), {
+                // use alias
+                __RowIndex: {
+                    // use row index func
+                    $rowIndex: [
+                        order // set order or null
+                    ]
+                }
+            });
+            queryFields.push(rowIndex);
             if (order)
                 delete obj.$order;
             const subQuery = self.formatSelect(obj);
             if (order)
                 obj.$order = order;
             //delete row index field
-            queryfields.pop();
+            queryFields.pop();
             const fields = [];
-            queryfields.forEach((x) => {
+            queryFields.forEach((x) => {
                 if (typeof x === 'string') {
                     fields.push(new QueryField(x));
                 }
@@ -66,9 +71,9 @@ class MSSqlFormatter extends SqlFormatter {
                     fields.push(field.as() || field.getName());
                 }
             });
-            sql = util.format('SELECT %s FROM (%s) t0 WHERE __RowIndex BETWEEN %s AND %s', fields.map((x) => {
+            sql = util.format('SELECT %s FROM (%s) [t0] WHERE [__RowIndex] BETWEEN %s AND %s', fields.map((x) => {
                 return self.format(x, '%f');
-            }).join(', '), subQuery, obj.$skip + 1, obj.$skip + obj.$take);
+            }).join(', '), subQuery, parseInt(obj.$skip, 10) + 1, parseInt(obj.$skip, 10) + parseInt(obj.$take, 10));
         }
         return sql;
     }
@@ -109,7 +114,7 @@ class MSSqlFormatter extends SqlFormatter {
         return util.format(' TODATETIMEOFFSET (%s,datepart(TZ,SYSDATETIMEOFFSET()))', this.escape(p0));
     }
     /**
-     * Escapes an object or a value and returns the equivalen sql value.
+     * Escapes an object or a value and returns the equivalent sql value.
      * @param {*} value
      * @param {boolean=} unquoted
      */
@@ -117,35 +122,20 @@ class MSSqlFormatter extends SqlFormatter {
         if (value === null || typeof value === 'undefined')
             return SqlUtils.escape(null);
         if (typeof value === 'string')
-            return '\'' + value.replace(/'/g, "''") + '\'';
+            return '\'' + value.replace(/'/g, '\'\'') + '\'';
         if (typeof value === 'boolean')
             return value ? '1' : '0';
         if (typeof value === 'object') {
             //add an exception for Date object
             if (value instanceof Date)
                 return this.escapeDate(value);
-            if (value.hasOwnProperty('$name'))
+            if (Object.prototype.hasOwnProperty.call(value, '$name'))
                 return this.escapeName(value.$name);
         }
         if (unquoted)
             return value.valueOf();
         else
             return SqlUtils.escape(value);
-    }
-    escapeName(name) {
-        // check name object
-        if (typeof name === 'object' && Object.prototype.hasOwnProperty.call(name, '$name')) {
-            return this.escapeName(name.$name); 
-        }
-        // throw error for unexpected type
-        if (typeof name !== 'string') {
-            throw new Error('Invalid name expression. Expected string.');
-        }
-        // exclude wildcard ( * or .*)
-        if (/^\*$/g.test(name) || /\.\*$/g.test(name)) {
-            return name.replace(new RegExp(ObjectNameValidator.validator.pattern.source, 'g'), this.settings.nameFormat);
-        }
-        return ObjectNameValidator.validator.escape(name, this.settings.nameFormat);
     }
     /**
      * @param {Date|*} val
@@ -161,7 +151,7 @@ class MSSqlFormatter extends SqlFormatter {
         const millisecond = zeroPad(val.getMilliseconds(), 3);
         //format timezone
         const offset = val.getTimezoneOffset(), timezone = (offset <= 0 ? '+' : '-') + zeroPad(-Math.floor(offset / 60), 2) + ':' + zeroPad(offset % 60, 2);
-        return "CONVERT(datetimeoffset,'" + year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second + "." + millisecond + timezone + "')";
+        return 'CONVERT(datetimeoffset,\'' + year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second + '.' + millisecond + timezone + '\')';
     }
     /**
      * Implements startsWith(a,b) expression formatter.
@@ -210,8 +200,18 @@ class MSSqlFormatter extends SqlFormatter {
     $trim(p0) {
         return util.format('LTRIM(RTRIM((%s)))', this.escape(p0));
     }
+    /**
+     * @param {*=} order 
+     * @returns {string}
+     */
+    $rowIndex(order) {
+        if (order == null) {
+            return 'ROW_NUMBER() OVER(ORDER BY (SELECT NULL))';
+        }
+        return util.format('ROW_NUMBER() OVER(%s)', this.format(order, '%o'));
+    }
 }
 
-module.exports = {
+export {
     MSSqlFormatter
 };
