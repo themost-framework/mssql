@@ -45,7 +45,7 @@
     "@babel/register": "^7.17.7",
     "@rollup/plugin-babel": "^5.3.1",
     "@rollup/plugin-commonjs": "^22.0.0",
-    "@themost/data": "^2.6.31",
+    "@themost/data": "^2.6.32",
     "@themost/xml": "^2.5.2",
     "@types/async": "^3.2.12",
     "@types/jasmine": "^3.5.14",
