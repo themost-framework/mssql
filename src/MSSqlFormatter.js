@@ -1,7 +1,6 @@
 // MOST Web Framework Codename Zero Gravity Copyright (c) 2017-2022, THEMOST LP All rights reserved
 import util from 'util';
-import { QueryField, SqlUtils, SqlFormatter, ObjectNameValidator } from '@themost/query';
-import { Args } from '@themost/common';
+import { QueryField, SqlUtils, SqlFormatter } from '@themost/query';
 
 function zeroPad(number, length) {
     number = number || 0;
@@ -137,17 +136,6 @@ class MSSqlFormatter extends SqlFormatter {
             return value.valueOf();
         else
             return SqlUtils.escape(value);
-    }
-    escapeName(name) {
-        Args.notString(name);
-        // exclude wildcard ( * or .*)
-        if (/^\*$/ig.test(name) || /\.\*$/ig.test(name)) {
-            return name.replace(/(\w+)/g, this.settings.nameFormat);
-        }
-        // validate name
-        ObjectNameValidator.validator.test(name);
-        // and escape
-        return name.replace(/(\w+)/g, this.settings.nameFormat);
     }
     /**
      * @param {Date|*} val
