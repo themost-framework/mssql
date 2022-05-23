@@ -32,7 +32,8 @@
   "homepage": "https://github.com/themost-framework/mssql",
   "dependencies": {
     "async": "^3.2.3",
-    "mssql": "^8.1.0"
+    "mssql": "^8.1.0",
+    "sprintf-js": "^1.1.2"
   },
   "peerDependencies": {
     "@themost/common": "^2",

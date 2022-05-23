@@ -14,7 +14,8 @@
             "title": "ID",
             "description": "The identifier of the item.",
             "type": "Integer",
-            "primary": true
+            "primary": true,
+            "nullable": false
         }
     ],
     "privileges": [

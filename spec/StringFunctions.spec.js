@@ -111,16 +111,16 @@ describe('StringFunctions', () => {
         });
     });
 
-    it('should use contains()', async () => {
-        await app.executeInTestTranscaction(async (context) => {
-            let items = await context.model('Product')
-                .asQueryable().where('name').contains('iMac').equal(true).getItems();
-            expect(items).toBeInstanceOf(Array);
-            for (const item of items) {
-                expect(item.name.includes('iMac')).toBeTruthy();
-            }
-        });
-    });
+    // it('should use contains()', async () => {
+    //     await app.executeInTestTranscaction(async (context) => {
+    //         let items = await context.model('Product')
+    //             .asQueryable().where('name').contains('iMac').equal(true).getItems();
+    //         expect(items).toBeInstanceOf(Array);
+    //         for (const item of items) {
+    //             expect(item.name.includes('iMac')).toBeTruthy();
+    //         }
+    //     });
+    // });
 
 
 });

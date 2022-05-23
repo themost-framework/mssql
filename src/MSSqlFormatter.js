@@ -1,5 +1,5 @@
 // MOST Web Framework Codename Zero Gravity Copyright (c) 2017-2022, THEMOST LP All rights reserved
-import util from 'util';
+import { sprintf } from 'sprintf-js';
 import { QueryField, SqlUtils, SqlFormatter } from '@themost/query';
 
 function zeroPad(number, length) {
@@ -71,7 +71,7 @@ class MSSqlFormatter extends SqlFormatter {
                     fields.push(field.as() || field.getName());
                 }
             });
-            sql = util.format('SELECT %s FROM (%s) [t0] WHERE [__RowIndex] BETWEEN %s AND %s', fields.map((x) => {
+            sql = sprintf('SELECT %s FROM (%s) [t0] WHERE [__RowIndex] BETWEEN %s AND %s', fields.map((x) => {
                 return self.format(x, '%f');
             }).join(', '), subQuery, parseInt(obj.$skip, 10) + 1, parseInt(obj.$skip, 10) + parseInt(obj.$take, 10));
         }
@@ -79,13 +79,26 @@ class MSSqlFormatter extends SqlFormatter {
     }
     /**
      * Implements indexOf(str,substr) expression formatter.
-     * @param {String} p0 The source string
-     * @param {String} p1 The string to search for
+     * @param {*} p0 The source string
+     * @param {*} p1 The string to search for
      */
     $indexof(p0, p1) {
+        return this.$indexOf(p0, p1);
+    }
+    /**
+     * Implements indexOf(str,substr) expression formatter.
+     * @param {*} p0 The source string
+     * @param {*} p1 The string to search for
+     */
+    $indexOf(p0, p1) {
         p1 = '%' + p1 + '%';
         return '(PATINDEX('.concat(this.escape(p1), ',', this.escape(p0), ')-1)');
     }
+
+    $length(p0) {
+        return sprintf('LEN(%s)', this.escape(p0));
+    }
+
     /**
      * Implements simple regular expression formatter. Important Note: MS SQL Server does not provide a core sql function for regular expression matching.
      * @param {string|*} p0 The source string or field
@@ -108,10 +121,10 @@ class MSSqlFormatter extends SqlFormatter {
             s1 = s1 + '%';
         }
         //use PATINDEX for text searching
-        return util.format('PATINDEX(%s,%s) >= 1', this.escape(s1), this.escape(p0));
+        return sprintf('PATINDEX(%s,%s) >= 1', this.escape(s1), this.escape(p0));
     }
     $date(p0) {
-        return util.format(' TODATETIMEOFFSET (%s,datepart(TZ,SYSDATETIMEOFFSET()))', this.escape(p0));
+        return sprintf('CONVERT(date, %s)', this.escape(p0));
     }
     /**
      * Escapes an object or a value and returns the equivalent sql value.
@@ -160,7 +173,7 @@ class MSSqlFormatter extends SqlFormatter {
      */
     $startswith(p0, p1) {
         p1 = '%' + p1 + '%';
-        return util.format('PATINDEX (%s,%s)', this.escape(p1), this.escape(p0));
+        return sprintf('PATINDEX (%s,%s)', this.escape(p1), this.escape(p0));
     }
     /**
      * Implements contains(a,b) expression formatter.
@@ -168,7 +181,7 @@ class MSSqlFormatter extends SqlFormatter {
      * @param p1 {*}
      */
     $text(p0, p1) {
-        return util.format('(PATINDEX (%s,%s) - 1)', this.escape('%' + p1 + '%'), this.escape(p0));
+        return sprintf('(PATINDEX (%s,%s) - 1)', this.escape('%' + p1 + '%'), this.escape(p0));
     }
     /**
      * Implements endsWith(a,b) expression formatter.
@@ -178,7 +191,7 @@ class MSSqlFormatter extends SqlFormatter {
     $endswith(p0, p1) {
         p1 = '%' + p1;
         // (PATINDEX('%S%',  UserData.alternateName))
-        return util.format('(CASE WHEN %s LIKE %s THEN 1 ELSE 0 END)', this.escape(p0), this.escape(p1));
+        return sprintf('(CASE WHEN %s LIKE %s THEN 1 ELSE 0 END)', this.escape(p0), this.escape(p1));
     }
     /**
      * Implements substring(str,pos) expression formatter.
@@ -189,16 +202,16 @@ class MSSqlFormatter extends SqlFormatter {
      */
     $substring(p0, pos, length) {
         if (length)
-            return util.format('SUBSTRING(%s,%s,%s)', this.escape(p0), pos.valueOf() + 1, length.valueOf());
+            return sprintf('SUBSTRING(%s,%s,%s)', this.escape(p0), pos.valueOf() + 1, length.valueOf());
         else
-            return util.format('SUBSTRING(%s,%s,%s)', this.escape(p0), pos.valueOf() + 1, 255);
+            return sprintf('SUBSTRING(%s,%s,%s)', this.escape(p0), pos.valueOf() + 1, 255);
     }
     /**
      * Implements trim(a) expression formatter.
      * @param p0 {*}
      */
     $trim(p0) {
-        return util.format('LTRIM(RTRIM((%s)))', this.escape(p0));
+        return sprintf('LTRIM(RTRIM((%s)))', this.escape(p0));
     }
     /**
      * @param {*=} order 
@@ -208,8 +221,45 @@ class MSSqlFormatter extends SqlFormatter {
         if (order == null) {
             return 'ROW_NUMBER() OVER(ORDER BY (SELECT NULL))';
         }
-        return util.format('ROW_NUMBER() OVER(%s)', this.format(order, '%o'));
+        return sprintf('ROW_NUMBER() OVER(%s)', this.format(order, '%o'));
     }
+
+    $year(p0) {
+        return sprintf('DATEPART(year, %s)', this.escape(p0));
+    }
+
+    $month(p0) {
+        return sprintf('DATEPART(month, %s)', this.escape(p0));
+    }
+
+    $dayOfMonth(p0) {
+        return sprintf('DATEPART(day, %s)', this.escape(p0));
+    }
+
+    $day(p0) {
+        return this.$dayOfMonth(p0);
+    }
+
+    $hour(p0) {
+        return sprintf('DATEPART(hour, %s)', this.escape(p0));
+    }
+
+    $minute(p0) {
+        return sprintf('DATEPART(minute, %s)', this.escape(p0));
+    }
+
+    $minutes(p0) {
+        return this.$minute(p0);
+    }
+
+    $second(p0) {
+        return sprintf('DATEPART(second, %s)', this.escape(p0));
+    }
+
+    $seconds(p0) {
+        return this.$second(p0);
+    }
+
 }
 
 export {

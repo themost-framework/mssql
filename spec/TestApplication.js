@@ -23,7 +23,7 @@ const masterConnectionOptions = {
     'server': process.env.DB_HOST,
     'port': parseInt(process.env.DB_PORT, 10),
     'user': process.env.DB_USER,
-    'database': 'mssql'
+    'database': 'master'
 };
 
 if (process.env.DB_PASSWORD) {
@@ -226,6 +226,7 @@ class TestApplication extends DataApplication {
                             const formatter = new MSSqlFormatter();
                             const sourceTableExists = await sourceAdapter.table(model.sourceAdapter).existsAsync();
                             if (sourceTableExists) {
+                                const key = model.getAttribute(model.primaryKey);
                                 // get source data
                                 let results = await sourceAdapter.executeAsync(`SELECT * FROM ${formatter.escapeName(model.sourceAdapter)}`);
                                 if (results.length > 0) {
@@ -241,13 +242,13 @@ class TestApplication extends DataApplication {
                                                 result[attribute.name] = LangUtils.parseBoolean(result[attribute.name]);
                                             }
                                         });
-                                        const sql = formatter.format(new QueryExpression().insert(result).into(model.sourceAdapter));
+                                        let sql = '';
+                                        if (key.type === 'Counter') {
+                                            sql = `SET IDENTITY_INSERT ${formatter.escapeName(model.sourceAdapter)} ON;`
+                                        }
+                                        sql += formatter.format(new QueryExpression().insert(result).into(model.sourceAdapter));
                                         // and execute
                                         await context.db.executeAsync(sql);
-                                    }
-                                    const key = model.getAttribute(model.primaryKey);
-                                    if (key.type === 'Counter') {
-                                        //
                                     }
                                 }
                             }

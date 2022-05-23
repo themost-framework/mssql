@@ -98,11 +98,11 @@ describe('DateFunctions', () => {
     it('should use getSeconds()', async () => {
         await app.executeInTestTranscaction(async (context) => {
             let items = await context.model('Order')
-                .asQueryable().where('orderDate').getSeconds().equal(45).silent().getItems();
+                .asQueryable().where('orderDate').getSeconds().equal(42).silent().getItems();
             expect(items).toBeInstanceOf(Array);
             expect(items.length).toBeGreaterThan(0);
             for (const item of items) {
-                expect(item.orderDate.getSeconds()).toEqual(45);
+                expect(item.orderDate.getSeconds()).toEqual(42);
             }
         });
     });
