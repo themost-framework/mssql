@@ -1,0 +1,29 @@
+{
+    "settings": {
+        "crypto": {
+            "algorithm": "aes256",
+            "key": "656e675539754a34634b4b4646723972617a483734366d327a433453596248386862434166514c36524164504c345734"
+        },
+        "auth": {
+            "unattendedExecutionAccount": "Z+mP8SdKPDREuLub"
+        },
+        "i18n": {
+            "locales": [
+                "en"
+            ],
+            "defaultLocale": "en"
+        }
+    },
+    "adapterTypes": [
+    ],
+    "adapters": [
+        {
+            "name": "source",
+            "invariantName": "sqlite",
+            "default": false,
+            "options": {
+                "database": "db/local.db"
+            }
+        }
+    ]
+}

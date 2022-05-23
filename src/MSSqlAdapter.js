@@ -2,7 +2,7 @@
 import mssql from 'mssql';
 import {ConnectionPool} from 'mssql';
 import async from 'async';
-import util from 'util';
+import { sprintf } from 'sprintf-js';
 import { TraceUtils } from '@themost/common';
 import { SqlUtils } from '@themost/query';
 import { MSSqlFormatter } from './MSSqlFormatter';
@@ -291,6 +291,22 @@ class MSSqlAdapter {
     }
 
     /**
+     * @param {string} entity 
+     * @param {string} attribute 
+     * @returns Promise<any>
+     */
+     selectIdentityAsync(entity, attribute) {
+        return new Promise((resolve, reject) => {
+            return this.selectIdentity(entity, attribute, (err, res) => {
+                if (err) {
+                    return reject(err);
+                }
+                return resolve(res);
+            });
+        });
+    }
+
+    /**
      * @param {*} query
      * @param {*} values
      * @param {function} callback
@@ -335,7 +351,7 @@ class MSSqlAdapter {
                             return callback(err);
                         }
                         if (process.env.NODE_ENV === 'development') {
-                            TraceUtils.debug(util.format('SQL (Execution Time:%sms):%s, Parameters:%s', (new Date()).getTime() - startTime, sql, JSON.stringify(values)));
+                            TraceUtils.debug(sprintf('SQL (Execution Time:%sms):%s, Parameters:%s', (new Date()).getTime() - startTime, sql, JSON.stringify(values)));
                         }
                         if (typeof query.$insert === 'undefined') {
                             if (result.recordsets.length === 1) {
@@ -426,7 +442,7 @@ class MSSqlAdapter {
                 s = size > 0 ? (size <= 10 ? 'smallmoney' : 'money') : 'money';
                 break;
             case 'Decimal':
-                s = util.format('decimal(%s,%s)', (size > 0 ? size : 19), (scale > 0 ? scale : 4));
+                s = sprintf('decimal(%s,%s)', (size > 0 ? size : 19), (scale > 0 ? scale : 4));
                 break;
             case 'Date':
                 s = 'date';
@@ -441,23 +457,23 @@ class MSSqlAdapter {
                 s = 'int';
                 break;
             case 'Duration':
-                s = size > 0 ? util.format('varchar(%s)', size) : 'varchar(48)';
+                s = size > 0 ? sprintf('varchar(%s)', size) : 'varchar(48)';
                 break;
             case 'URL':
                 if (size > 0)
-                    s = util.format('varchar(%s)', size);
+                    s = sprintf('varchar(%s)', size);
                 else
                     s = 'varchar(512)';
                 break;
             case 'Text':
                 if (size > 0)
-                    s = util.format('varchar(%s)', size);
+                    s = sprintf('varchar(%s)', size);
                 else
                     s = 'varchar(512)';
                 break;
             case 'Note':
                 if (size > 0)
-                    s = util.format('varchar(%s)', size);
+                    s = sprintf('varchar(%s)', size);
                 else
                     s = 'text';
                 break;
@@ -618,10 +634,10 @@ class MSSqlAdapter {
                     return self.format('[%f]', x);
                 }).join(', ');
                 if (strPKFields.length > 0) {
-                    strFields += ', ' + util.format('PRIMARY KEY (%s)', strPKFields);
+                    strFields += ', ' + sprintf('PRIMARY KEY (%s)', strPKFields);
                 }
-                const strTable = util.format('[%s].[%s]', owner, table);
-                const sql = util.format('CREATE TABLE %s (%s)', strTable, strFields);
+                const strTable = sprintf('[%s].[%s]', owner, table);
+                const sql = sprintf('CREATE TABLE %s (%s)', strTable, strFields);
                 self.execute(sql, null, function (err) {
                     callback(err);
                 });
@@ -653,7 +669,7 @@ class MSSqlAdapter {
                     //do nothing
                     return callback();
                 }
-                const strTable = util.format('[%s].[%s]', owner, table);
+                const strTable = sprintf('[%s].[%s]', owner, table);
                 //generate SQL statement
                 const sql = fields.map((x) => {
                     return self.format('ALTER TABLE ' + strTable + ' ADD [%f] %t', x);
@@ -689,7 +705,7 @@ class MSSqlAdapter {
                     //do nothing
                     return callback();
                 }
-                const strTable = util.format('[%s].[%s]', owner, table);
+                const strTable = sprintf('[%s].[%s]', owner, table);
                 //generate SQL statement
                 const sql = fields.map((x) => {
                     return self.format('ALTER TABLE ' + strTable + ' ALTER COLUMN [%f] %t', x);
@@ -700,7 +716,7 @@ class MSSqlAdapter {
             },
             changeAsync: function (fields) {
                 return new Promise((resolve, reject) => {
-                    this.add(fields, (err, res) => {
+                    this.change(fields, (err, res) => {
                         if (err) {
                             return reject(err);
                         }
@@ -771,7 +787,7 @@ class MSSqlAdapter {
                         const exists = (result[0].count > 0);
                         if (exists) {
                             const formatter = new MSSqlFormatter();
-                            const sql = util.format('DROP VIEW %s.%s', formatter.escapeName(owner), formatter.escapeName(view));
+                            const sql = sprintf('DROP VIEW %s.%s', formatter.escapeName(owner), formatter.escapeName(view));
                             self.execute(sql, [], function (err) {
                                 if (err) {
                                     callback(err);
@@ -810,7 +826,7 @@ class MSSqlAdapter {
                         }
                         try {
                             const formatter = new MSSqlFormatter();
-                            const sql = 'EXECUTE(\'' + util.format('CREATE VIEW %s.%s AS ', formatter.escapeName(owner), formatter.escapeName(view)) + formatter.format(q) + '\')';
+                            const sql = 'EXECUTE(\'' + sprintf('CREATE VIEW %s.%s AS ', formatter.escapeName(owner), formatter.escapeName(view)) + formatter.format(q) + '\')';
                             self.execute(sql, [], tr);
                         }
                         catch (e) {
@@ -1031,6 +1047,20 @@ class MSSqlAdapter {
                     callback(err, result);
                 });
             }
+        });
+    }
+
+    /**
+     * @param  {DataModelMigration|*} obj - An Object that represents the data model scheme we want to migrate
+     */
+    migrateAsync(obj) {
+        return new Promise((resolve, reject) => {
+            return this.migrate(obj, (err, res) => {
+                if (err) {
+                    return reject(err);
+                }
+                return resolve(res);
+            });
         });
     }
     /**

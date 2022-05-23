@@ -1,88 +1,230 @@
-import { MSSqlAdapter, createInstance } from '@themost/mssql';
+import { MSSqlFormatter } from '../src';
 import { QueryExpression } from '@themost/query';
-// get options from environment for testing
-const testConnectionOptions = {
-    'server': process.env.MSSQL_SERVER,
-    'port': parseInt(process.env.MSSQL_SERVER_PORT, 10),
-    'user': process.env.MSSQL_USER,
-    'password': process.env.MSSQL_PASSWORD,
-    'database': process.env.MSSQL_DB
-};
+import { TestApplication } from './TestApplication';
 
-// get options from environment for testing
-const masterConnectionOptions = {
-    'server': process.env.MSSQL_SERVER,
-    'port': parseInt(process.env.MSSQL_SERVER_PORT, 10),
-    'user': process.env.MSSQL_USER,
-    'password': process.env.MSSQL_PASSWORD,
-    'database': 'master'
-};
-
-describe('MSSqlFormatter', () => {
-
-    it('should create instance', async () => {
-        const adapter = new MSSqlAdapter();
-        expect(adapter).toBeTruthy();
+describe('MSSqlAdapter', () => {
+    /**
+     * @type {TestApplication}
+     */
+    let app;
+    beforeAll(async () => {
+        app = new TestApplication(__dirname);
+        await app.tryCreateDatabase();
+    });
+    beforeEach(async () => {
+        //
+    });
+    afterAll(async () => {
+        await app.finalize();
+    });
+    afterEach(async () => {
+        //
+    });
+    it('should check database', async () => {
+        await app.executeInTestTranscaction(async (context) => {
+            let exists = await context.db.database('a_test_database').existsAsync();
+            expect(exists).toBeFalsy();
+            exists = await context.db.database('test_db').existsAsync();
+            expect(exists).toBeTruthy();
+        });
     });
 
-    it('should use createInstance()', async () => {
-        const adapter = createInstance();
-        expect(adapter).toBeTruthy();
-        expect(adapter).toBeInstanceOf(MSSqlAdapter);
+    it('should check table', async () => {
+        await app.executeInTestTranscaction(async (context) => {
+            const exists = await context.db.table('Table1').existsAsync();
+            expect(exists).toBeFalsy();
+        });
     });
 
-    it('should use open()', async () => {
-        /**
-         * @type {MSSqlAdapter}
-         */
-        const adapter = createInstance(masterConnectionOptions);
-        await adapter.openAsync();
-        expect(adapter.rawConnection).toBeTruthy();
-        await adapter.closeAsync();
-        expect(adapter.rawConnection).toBeFalsy();
+    it('should create table', async () => {
+        await app.executeInTestTranscaction(async (context) => {
+            const db = context.db;
+            let exists = await db.table('Table1').existsAsync();
+            expect(exists).toBeFalsy();
+            await context.db.table('Table1').createAsync([
+                {
+                    name: 'id',
+                    type: 'Counter',
+                    primary: true,
+                    nullable: false
+                },
+                {
+                    name: 'name',
+                    type: 'Text',
+                    size: 255,
+                    nullable: false
+                },
+                {
+                    name: 'description',
+                    type: 'Text',
+                    size: 255,
+                    nullable: true
+                }
+            ]);
+            exists = await db.table('Table1').existsAsync();
+            expect(exists).toBeTruthy();
+            // get columns
+            const columns = await db.table('Table1').columnsAsync();
+            expect(columns).toBeInstanceOf(Array);
+            let column = columns.find((col) => col.name === 'id');
+            expect(column).toBeTruthy();
+            expect(column.nullable).toBeFalsy();
+            column = columns.find((col) => col.name === 'description');
+            expect(column).toBeTruthy();
+            expect(column.nullable).toBeTruthy();
+            expect(column.size).toBe(255);
+            await db.executeAsync(`DROP TABLE ${new MSSqlFormatter().escapeName('Table1')}`);
+        });
     });
 
-    it('should use close()', async () => {
-        /**
-         * @type {MSSqlAdapter}
-         */
-        const adapter = createInstance(masterConnectionOptions);
-        await adapter.openAsync();
-        await adapter.closeAsync();
-        expect(adapter.rawConnection).toBeFalsy();
+    it('should alter table', async () => {
+        await app.executeInTestTranscaction(async (context) => {
+            const db = context.db;
+            let exists = await db.table('Table2').existsAsync();
+            expect(exists).toBeFalsy();
+            await db.table('Table2').createAsync([
+                {
+                    name: 'id',
+                    type: 'Counter',
+                    primary: true,
+                    nullable: false
+                },
+                {
+                    name: 'name',
+                    type: 'Text',
+                    size: 255,
+                    nullable: false
+                }
+            ]);
+            exists = await db.table('Table2').existsAsync();
+            expect(exists).toBeTruthy();
+            await db.table('Table2').addAsync([
+                {
+                    name: 'description',
+                    type: 'Text',
+                    size: 255,
+                    nullable: true
+                }
+            ]);
+            // get columns
+            let columns = await db.table('Table2').columnsAsync();
+            expect(columns).toBeInstanceOf(Array);
+            let column = columns.find((col) => col.name === 'description');
+            expect(column).toBeTruthy();
+
+            await db.table('Table2').changeAsync([
+                {
+                    name: 'description',
+                    type: 'Text',
+                    size: 512,
+                    nullable: true
+                }
+            ]);
+            columns = await db.table('Table2').columnsAsync();
+            column = columns.find((col) => col.name === 'description');
+            expect(column.size).toEqual(512);
+            expect(column.nullable).toBeTruthy();
+            await db.executeAsync(`DROP TABLE ${new MSSqlFormatter().escapeName('Table2')}`);
+        });
+
     });
 
-    it('should query database', async () => {
-        // validate and create database
-        /**
-         * @type {MSSqlAdapter}
-         */
-        const adapter = createInstance(masterConnectionOptions);
-        const query = new QueryExpression().from('sys.databases').select('database_id', 'name').where('name').equal(testConnectionOptions.database);
-        const res = await adapter.executeAsync(query);
-        expect(res).toBeInstanceOf(Array);
-        expect(res.length).toBeLessThanOrEqual(1);
-        await adapter.closeAsync();
+
+    it('should create view', async () => {
+
+        await app.executeInTestTranscaction(async (context) => {
+            const db = context.db;
+            let exists = await db.table('Table1').existsAsync();
+            expect(exists).toBeFalsy();
+            await db.table('Table1').createAsync([
+                {
+                    name: 'id',
+                    type: 'Counter',
+                    primary: true,
+                    nullable: false
+                },
+                {
+                    name: 'name',
+                    type: 'Text',
+                    size: 255,
+                    nullable: false
+                },
+                {
+                    name: 'description',
+                    type: 'Text',
+                    size: 255,
+                    nullable: true
+                }
+            ]);
+            exists = await db.table('Table1').existsAsync();
+            expect(exists).toBeTruthy();
+
+            exists = await db.view('View1').existsAsync();
+            expect(exists).toBeFalsy();
+
+            const query = new QueryExpression().select('id', 'name', 'description').from('Table1');
+            await db.view('View1').createAsync(query);
+
+            exists = await db.view('View1').existsAsync();
+            expect(exists).toBeTruthy();
+
+            await db.view('View1').dropAsync();
+
+            exists = await db.view('View1').existsAsync();
+            expect(exists).toBeFalsy();
+            await db.executeAsync(`DROP TABLE ${new MSSqlFormatter().escapeName('Table1')}`);
+        });
     });
 
-    it('should use database(string).exists()', async () => {
-        const adapter = new MSSqlAdapter(masterConnectionOptions);
-        let exists = await adapter.database(testConnectionOptions.database).existsAsync();
-        expect(exists).toBeTrue();
-        exists = await adapter.database('other_database').existsAsync();
-        expect(exists).toBeFalse();
-        await adapter.closeAsync();
-    });
+    it('should create index', async () => {
+        await app.executeInTestTranscaction(async (context) => {
+            const db = context.db;
+            let exists = await db.table('Table1').existsAsync();
+            expect(exists).toBeFalsy();
+            await db.table('Table1').createAsync([
+                {
+                    name: 'id',
+                    type: 'Counter',
+                    primary: true,
+                    nullable: false
+                },
+                {
+                    name: 'name',
+                    type: 'Text',
+                    size: 255,
+                    nullable: false
+                },
+                {
+                    name: 'description',
+                    type: 'Text',
+                    size: 255,
+                    nullable: true
+                }
+            ]);
+            exists = await db.table('Table1').existsAsync();
+            expect(exists).toBeTruthy();
 
-    it('should use database(string).create()', async () => {
-        const adapter = new MSSqlAdapter(masterConnectionOptions);
-        await adapter.database('test_create_a_database').createAsync();
-        let exists = await adapter.database('test_create_a_database').existsAsync();
-        expect(exists).toBeTrue();
-        await adapter.executeAsync('DROP DATABASE test_create_a_database;');
-        exists = await adapter.database('test_create_a_database').existsAsync();
-        expect(exists).toBeFalse();
-        await adapter.closeAsync();
-    });
+            let list = await db.indexes('Table1').listAsync();
+            expect(list).toBeInstanceOf(Array);
+            exists = list.findIndex((index) => index.name === 'idx_name') < 0;
 
+            await db.indexes('Table1').createAsync('idx_name', [
+                'name'
+            ]);
+
+            list = await db.indexes('Table1').listAsync();
+            expect(list).toBeInstanceOf(Array);
+            exists = list.findIndex((index) => index.name === 'idx_name') >= 0;
+            expect(exists).toBeTruthy();
+
+            await db.indexes('Table1').dropAsync('idx_name');
+
+            list = await db.indexes('Table1').listAsync();
+            expect(list).toBeInstanceOf(Array);
+            exists = list.findIndex((index) => index.name === 'idx_name') >= 0;
+            expect(exists).toBeFalsy();
+
+            await db.executeAsync(`DROP TABLE ${new MSSqlFormatter().escapeName('Table1')}`);
+        });
+    });
 });
