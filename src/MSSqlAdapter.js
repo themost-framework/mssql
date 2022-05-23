@@ -291,6 +291,22 @@ class MSSqlAdapter {
     }
 
     /**
+     * @param {string} entity 
+     * @param {string} attribute 
+     * @returns Promise<any>
+     */
+     selectIdentityAsync(entity, attribute) {
+        return new Promise((resolve, reject) => {
+            return this.selectIdentity(entity, attribute, (err, res) => {
+                if (err) {
+                    return reject(err);
+                }
+                return resolve(res);
+            });
+        });
+    }
+
+    /**
      * @param {*} query
      * @param {*} values
      * @param {function} callback
@@ -1031,6 +1047,20 @@ class MSSqlAdapter {
                     callback(err, result);
                 });
             }
+        });
+    }
+
+    /**
+     * @param  {DataModelMigration|*} obj - An Object that represents the data model scheme we want to migrate
+     */
+    migrateAsync(obj) {
+        return new Promise((resolve, reject) => {
+            return this.migrate(obj, (err, res) => {
+                if (err) {
+                    return reject(err);
+                }
+                return resolve(res);
+            });
         });
     }
     /**

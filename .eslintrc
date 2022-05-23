@@ -13,6 +13,7 @@
       "beforeEach": false,
       "beforeAll": false,
       "after": false,
+      "afterEach": false,
       "afterAll": false,
       "expect": false,
       "expectAsync": false,
