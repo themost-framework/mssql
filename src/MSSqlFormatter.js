@@ -260,6 +260,18 @@ class MSSqlFormatter extends SqlFormatter {
         return this.$second(p0);
     }
 
+    $ifnull(p0, p1) {
+        return sprintf('ISNULL(%s, %s)', this.escape(p0), this.escape(p1));
+    }
+
+    $ifNull(p0, p1) {
+        return sprintf('ISNULL(%s, %s)', this.escape(p0), this.escape(p1));
+    }
+
+    $toString(p0) {
+        return sprintf('CAST(%s AS NVARCHAR)', this.escape(p0));
+    }
+
 }
 
 export {
