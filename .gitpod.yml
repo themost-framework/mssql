@@ -5,6 +5,10 @@ tasks:
   - init: |
       docker-compose pull
       npm ci
+      echo -e DB_HOST=localhost >> .env
+      echo -e DB_PORT=1433 >> .env
+      echo -e DB_USER=sa >> .env
+      echo -e DB_PASSWORD=Str0ngPa$w0rd >> .env
   - command: |
       docker-compose up
 ports:
