@@ -30,4 +30,4 @@ tsconfig.json
 # gitpod
 .gitpod.yml
 .gitpod.dockerfile
-.gitpod.compose.yml
+docker-compose.yml
