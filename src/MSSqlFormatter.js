@@ -132,23 +132,17 @@ class MSSqlFormatter extends SqlFormatter {
      * @param {boolean=} unquoted
      */
     escape(value, unquoted) {
-        if (value === null || typeof value === 'undefined')
-            return SqlUtils.escape(null);
-        if (typeof value === 'string')
-            return '\'' + value.replace(/'/g, '\'\'') + '\'';
-        if (typeof value === 'boolean')
+        if (typeof value === 'boolean') {
             return value ? '1' : '0';
-        if (typeof value === 'object') {
-            //add an exception for Date object
-            if (value instanceof Date)
-                return this.escapeDate(value);
-            if (Object.prototype.hasOwnProperty.call(value, '$name'))
-                return this.escapeName(value.$name);
         }
-        if (unquoted)
-            return value.valueOf();
-        else
-            return SqlUtils.escape(value);
+        if (value instanceof Date) {
+            return this.escapeDate(value);
+        }
+        if (typeof value === 'string') {
+            const str = value.replace(/'/g, '\'\'');
+            return unquoted ? str : ('\'' + str + '\'');
+        }
+        return super.escape.bind(this)(value, unquoted);
     }
     /**
      * @param {Date|*} val
