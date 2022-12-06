@@ -138,8 +138,9 @@ class MSSqlFormatter extends SqlFormatter {
         if (value instanceof Date) {
             return this.escapeDate(value);
         }
-        if (typeof value === 'string' && !unquoted) {
-            return '\'' + value.replace(/'/g, '\'\'') + '\'';
+        if (typeof value === 'string') {
+            const str = value.replace(/'/g, '\'\'');
+            return unquoted ? str : ('\'' + str + '\'');
         }
         return super.escape.bind(this)(value, unquoted);
     }
