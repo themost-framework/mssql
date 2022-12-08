@@ -1,6 +1,6 @@
 {
   "name": "@themost/mssql",
-  "version": "2.6.6",
+  "version": "2.6.7",
   "description": "MOST Web Framework MSSQL Data Adapter",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
