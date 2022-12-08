@@ -1,5 +1,5 @@
 import { TestApplication } from './TestApplication';
-
+import moment from 'moment';
 describe('DateFunctions', () => {
     /**
      * @type {TestApplication}
@@ -127,7 +127,7 @@ describe('DateFunctions', () => {
             let product = await context.model('Product').where('name').equal('AMD Radeon R9 290')
                 .silent().getItem();
             expect(product).toBeTruthy();
-            const now = new Date();
+            const now = moment(new Date()).startOf('day').toDate();
             now.setMilliseconds(0);
             let releaseDate = now;
             product.releaseDate = new Date(releaseDate);
