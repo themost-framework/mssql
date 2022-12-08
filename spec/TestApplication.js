@@ -10,7 +10,13 @@ const testConnectionOptions = {
     'server': process.env.DB_HOST,
     'port': parseInt(process.env.DB_PORT, 10),
     'user': process.env.DB_USER,
-    'database': 'test_db'
+    'database': 'test_db',
+    'timezone': 'Europe/Athens',
+    'options': {
+        'encrypt': false,
+        'trustServerCertificate': true,
+        'useUTC': true
+    }
 };
 
 if (process.env.DB_PASSWORD) {
