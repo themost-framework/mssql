@@ -1,5 +1,5 @@
 import { TestApplication } from './TestApplication';
-
+import moment from 'moment';
 describe('DateFunctions', () => {
     /**
      * @type {TestApplication}
@@ -104,6 +104,36 @@ describe('DateFunctions', () => {
             for (const item of items) {
                 expect(item.orderDate.getSeconds()).toEqual(42);
             }
+        });
+    });
+
+    it('should use datetimeoffset', async () => {
+        await app.executeInTestTranscaction(async (context) => {
+            let user = await context.model('User').where('name').equal('alexis.rees@example.com')
+                .silent().getItem();
+            expect(user).toBeTruthy();
+            const now = new Date();
+            user.lastLogon = now;
+            await context.model('User').silent().save(user);
+            user = await context.model('User').where('name').equal('alexis.rees@example.com')
+                .silent().getItem();
+            expect(user.lastLogon).toEqual(now);
+        });
+    });
+
+    it('should use date', async () => {
+        await app.executeInTestTranscaction(async (context) => {
+            // get AMD Radeon R9 290
+            let product = await context.model('Product').where('name').equal('AMD Radeon R9 290')
+                .silent().getItem();
+            expect(product).toBeTruthy();
+            const now = moment(new Date()).startOf('day').toDate();
+            let releaseDate = now;
+            product.releaseDate = new Date(releaseDate);
+            await context.model('Product').silent().save(product);
+            product = await context.model('Product').where('name').equal('AMD Radeon R9 290')
+                .silent().getItem();
+            expect(product.releaseDate).toEqual(now);
         });
     });
 

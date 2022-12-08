@@ -1,6 +1,6 @@
 // MOST Web Framework Codename Zero Gravity Copyright (c) 2017-2022, THEMOST LP All rights reserved
 import { sprintf } from 'sprintf-js';
-import { QueryField, SqlUtils, SqlFormatter } from '@themost/query';
+import { QueryField, SqlFormatter } from '@themost/query';
 
 function zeroPad(number, length) {
     number = number || 0;
@@ -10,6 +10,8 @@ function zeroPad(number, length) {
     }
     return res;
 }
+
+
 
 /**
  * @class
@@ -21,8 +23,10 @@ class MSSqlFormatter extends SqlFormatter {
      */
     constructor() {
         super();
+        const offset = new Date().getTimezoneOffset();
         this.settings = {
-            nameFormat: '[$1]'
+            nameFormat: '[$1]',
+            timezone: (offset <= 0 ? '+' : '-') + zeroPad(-Math.floor(offset / 60), 2) + ':' + zeroPad(offset % 60, 2)
         };
     }
     formatLimitSelect(obj) {
@@ -219,15 +223,15 @@ class MSSqlFormatter extends SqlFormatter {
     }
 
     $year(p0) {
-        return sprintf('DATEPART(year, %s)', this.escape(p0));
+        return sprintf('DATEPART(year, SWITCHOFFSET(%s, \'%s\'))', this.escape(p0), this.settings.timezone);
     }
 
     $month(p0) {
-        return sprintf('DATEPART(month, %s)', this.escape(p0));
+        return sprintf('DATEPART(month, SWITCHOFFSET(%s, \'%s\'))', this.escape(p0), this.settings.timezone);
     }
 
     $dayOfMonth(p0) {
-        return sprintf('DATEPART(day, %s)', this.escape(p0));
+        return sprintf('DATEPART(day, SWITCHOFFSET(%s, \'%s\'))', this.escape(p0), this.settings.timezone);
     }
 
     $day(p0) {
@@ -235,11 +239,11 @@ class MSSqlFormatter extends SqlFormatter {
     }
 
     $hour(p0) {
-        return sprintf('DATEPART(hour, %s)', this.escape(p0));
+        return sprintf('DATEPART(hour, SWITCHOFFSET(%s, \'%s\'))', this.escape(p0), this.settings.timezone);
     }
 
     $minute(p0) {
-        return sprintf('DATEPART(minute, %s)', this.escape(p0));
+        return sprintf('DATEPART(minute, SWITCHOFFSET(%s, \'%s\'))', this.escape(p0), this.settings.timezone);
     }
 
     $minutes(p0) {
@@ -247,7 +251,7 @@ class MSSqlFormatter extends SqlFormatter {
     }
 
     $second(p0) {
-        return sprintf('DATEPART(second, %s)', this.escape(p0));
+        return sprintf('DATEPART(second, SWITCHOFFSET(%s, \'%s\'))', this.escape(p0), this.settings.timezone);
     }
 
     $seconds(p0) {
