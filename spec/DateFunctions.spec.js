@@ -128,7 +128,6 @@ describe('DateFunctions', () => {
                 .silent().getItem();
             expect(product).toBeTruthy();
             const now = moment(new Date()).startOf('day').toDate();
-            now.setMilliseconds(0);
             let releaseDate = now;
             product.releaseDate = new Date(releaseDate);
             await context.model('Product').silent().save(product);
