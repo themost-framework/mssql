@@ -107,4 +107,35 @@ describe('DateFunctions', () => {
         });
     });
 
+    it('should use datetimeoffset', async () => {
+        await app.executeInTestTranscaction(async (context) => {
+            let user = await context.model('User').where('name').equal('alexis.rees@example.com')
+                .silent().getItem();
+            expect(user).toBeTruthy();
+            const now = new Date();
+            user.lastLogon = now;
+            await context.model('User').silent().save(user);
+            user = await context.model('User').where('name').equal('alexis.rees@example.com')
+                .silent().getItem();
+            expect(user.lastLogon).toEqual(now);
+        });
+    });
+
+    it('should use date', async () => {
+        await app.executeInTestTranscaction(async (context) => {
+            // get AMD Radeon R9 290
+            let product = await context.model('Product').where('name').equal('AMD Radeon R9 290')
+                .silent().getItem();
+            expect(product).toBeTruthy();
+            const now = new Date();
+            now.setMilliseconds(0);
+            let releaseDate = now;
+            product.releaseDate = new Date(releaseDate);
+            await context.model('Product').silent().save(product);
+            product = await context.model('Product').where('name').equal('AMD Radeon R9 290')
+                .silent().getItem();
+            expect(product.releaseDate).toEqual(now);
+        });
+    });
+
 });

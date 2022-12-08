@@ -57,6 +57,8 @@
     "jasmine": "^4.1.0",
     "jasmine-spec-reporter": "^7.0.0",
     "module-alias": "^2.2.2",
+    "moment": "^2.29.4",
+    "moment-timezone": "^0.5.39",
     "rimraf": "^3.0.2",
     "rollup": "^2.71.1",
     "rollup-plugin-dts": "^4.2.1",
