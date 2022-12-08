@@ -216,7 +216,6 @@ class TestApplication extends DataApplication {
                 return item.abstract ? false : true;
             });
             const sourceAdapter = new SqliteAdapter(sourceConnectionOptions);
-            const formatter = new MSSqlFormatter();
             for (let entityType of entityTypes) {
                 TraceUtils.log(`Upgrading ${entityType.name}`);
                 await new Promise((resolve, reject) => {
