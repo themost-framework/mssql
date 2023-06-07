@@ -270,12 +270,19 @@ class MSSqlFormatter extends SqlFormatter {
         return sprintf('CAST(%s AS NVARCHAR)', this.escape(p0));
     }
 
+    isLogical = function(obj) {
+        for (const key in obj) {
+            return (/^\$(and|or|not|nor)$/g.test(key));
+        }
+        return false;
+    }
+
     $cond(ifExpr, thenExpr, elseExpr) {
         // validate ifExpr which should an instance of QueryExpression or a comparison expression
         let ifExpression;
         if (ifExpr instanceof QueryExpression) {
             ifExpression = this.formatWhere(ifExpr.$where);
-        } else if (this.isComparison(ifExpr)) {
+        } else if (this.isComparison(ifExpr) || this.isLogical(ifExpr)) {
             ifExpression = this.formatWhere(ifExpr);
         } else {
             throw new Error('Condition parameter should be an instance of query or comparison expression');
