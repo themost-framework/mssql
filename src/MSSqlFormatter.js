@@ -1,6 +1,6 @@
 // MOST Web Framework Codename Zero Gravity Copyright (c) 2017-2022, THEMOST LP All rights reserved
 import { sprintf } from 'sprintf-js';
-import { QueryField, SqlFormatter } from '@themost/query';
+import { QueryField, SqlFormatter, QueryExpression } from '@themost/query';
 
 function zeroPad(number, length) {
     number = number || 0;
@@ -268,6 +268,19 @@ class MSSqlFormatter extends SqlFormatter {
 
     $toString(p0) {
         return sprintf('CAST(%s AS NVARCHAR)', this.escape(p0));
+    }
+
+    $cond(ifExpr, thenExpr, elseExpr) {
+        // validate ifExpr which should an instance of QueryExpression or a comparison expression
+        let ifExpression;
+        if (ifExpr instanceof QueryExpression) {
+            ifExpression = this.formatWhere(ifExpr.$where);
+        } else if (this.isComparison(ifExpr)) {
+            ifExpression = this.formatWhere(ifExpr);
+        } else {
+            throw new Error('Condition parameter should be an instance of query or comparison expression');
+        }
+        return sprintf('(CASE WHEN %s THEN %s ELSE %s END)', ifExpression, this.escape(thenExpr), this.escape(elseExpr));
     }
 
 }
