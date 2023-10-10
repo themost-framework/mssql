@@ -65,8 +65,16 @@ class MSSqlAdapter {
             }
         }, self.options);
         // create connection
+        let callbackAlreadyCalled = false;
         const connection = new ConnectionPool(connectionOptions);
+        connection.on('error', function(err) {
+            TraceUtils.error(err);
+            if (callbackAlreadyCalled === false) {
+             return callback(err);
+            } 
+         });
         connection.connect(function(err) {
+            callbackAlreadyCalled = true;
             if (err) {
                 // destroy connection
                 self.rawConnection = null;
@@ -170,8 +178,13 @@ class MSSqlAdapter {
                                 try {
                                     if (err) {
                                         if (self.transaction) {
-                                            self.transaction.rollback();
-                                            self.transaction = null;
+                                            return self.transaction.rollback(function(err) {
+                                                self.transaction = null;
+                                                if (err) {
+                                                    return callback(err);
+                                                }
+                                                return callback();
+                                            });
                                         }
                                         callback.call(self, err);
                                     }
@@ -182,7 +195,13 @@ class MSSqlAdapter {
                                         }
                                         self.transaction.commit(function (err) {
                                             if (err) {
-                                                self.transaction.rollback();
+                                                return self.transaction.rollback(function(err) {
+                                                    self.transaction = null;
+                                                    if (err) {
+                                                        return callback(err);
+                                                    }
+                                                    return callback();
+                                                });
                                             }
                                             self.transaction = null;
                                             callback.call(self, err);
