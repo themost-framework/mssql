@@ -78,7 +78,7 @@ class MSSqlAdapter {
                 self.rawConnection = null;
                 TraceUtils.log(err);
             }
-            callback.call(self, err);
+            return callback(err);
         });
     }
     /**
