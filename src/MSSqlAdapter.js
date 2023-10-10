@@ -6,6 +6,7 @@ import { sprintf } from 'sprintf-js';
 import { TraceUtils } from '@themost/common';
 import { SqlUtils } from '@themost/query';
 import { MSSqlFormatter } from './MSSqlFormatter';
+import { TransactionIsolationLevelFormatter } from './TransactionIsolationLevel';
 
 /**
  * @class
@@ -67,6 +68,13 @@ class MSSqlAdapter {
         // create connection
         let callbackAlreadyCalled = false;
         const connection = new ConnectionPool(connectionOptions);
+        let transactionIsolationLevel = null;
+        if (connectionOptions && connectionOptions.options) {
+            if (Object.prototype.hasOwnProperty.call(connectionOptions.options, 'transactionIsolationLevel')) {
+                const level = connectionOptions.options.transactionIsolationLevel;
+                transactionIsolationLevel = new TransactionIsolationLevelFormatter().format(level);
+            }
+        }
         connection.on('error', function(err) {
             TraceUtils.error(err);
             if (callbackAlreadyCalled === false) {
@@ -84,7 +92,15 @@ class MSSqlAdapter {
             }
             // set connection
             self.rawConnection = connection;
-            return callback();
+            if (transactionIsolationLevel == null) {
+                return callback();
+            }
+            return self.execute(transactionIsolationLevel, [], function(err) {
+                if (err) {
+                    return callback(err);
+                }
+                return callback();
+            });
         });
     }
     /**
