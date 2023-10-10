@@ -11,6 +11,7 @@ const util = require('util');
 const { TraceUtils } = require('@themost/common');
 const { QueryExpression, SqlUtils } = require('@themost/query');
 const { MSSqlFormatter } = require('./MSSqlFormatter');
+const { TransactionIsolationLevelFormatter } = require('./TransactionIsolationLevel')
 /**
  * @class
  */
@@ -64,6 +65,14 @@ class MSSqlAdapter {
         let callbackAlreadyCalled = false;
         // clone connection options
         const connectionOptions = Object.assign({}, self.options);
+
+        let transactionIsolationLevel = null;
+        if (connectionOptions && connectionOptions.options) {
+            if (Object.prototype.hasOwnProperty.call(connectionOptions.options, 'transactionIsolationLevel')) {
+                const level = connectionOptions.options.transactionIsolationLevel;
+                transactionIsolationLevel = new TransactionIsolationLevelFormatter().format(level);
+            }
+        }
         // create connection
         self.rawConnection = new mssql.Connection(connectionOptions);
         self.rawConnection.on('error', function(err) {
@@ -77,8 +86,17 @@ class MSSqlAdapter {
             if (err) {
                 self.rawConnection = null;
                 TraceUtils.log(err);
+                return callback(err);
             }
-            return callback(err);
+            if (transactionIsolationLevel == null) {
+                return callback();
+            }
+            return self.execute(transactionIsolationLevel, [], function(err) {
+                if (err) {
+                    return callback(err);
+                }
+                return callback();
+            });
         });
     }
     /**

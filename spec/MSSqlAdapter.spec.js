@@ -5,19 +5,22 @@ const ProductModel = require('./config/models/Product.json');
 const EmployeeModel = require('./config/models/Employee.json');
 // get options from environmet for testing
 const testConnectionOptions = {
-    "server": process.env.MSSQL_SERVER,
-    "port": process.env.MSSQL_SERVER_PORT,
-    "user": process.env.MSSQL_USER,
-    "password": process.env.MSSQL_PASSWORD,
-    "database": "test_themost_dev"
+    "server": process.env.DB_HOST,
+    "port": process.env.DB_PORT,
+    "user": process.env.DB_USER,
+    "password": process.env.DB_PASSWORD,
+    "database": "test_themost_dev",
+    "options": {
+        "transactionIsolationLevel": "readCommitted"
+    }
 };
 
 // get options from environmet for testing
 const masterConnectionOptions = {
-    "server": process.env.MSSQL_SERVER,
-    "port": process.env.MSSQL_SERVER_PORT,
-    "user": process.env.MSSQL_USER,
-    "password": process.env.MSSQL_PASSWORD,
+    "server": process.env.DB_HOST,
+    "port": process.env.DB_PORT,
+    "user": process.env.DB_USER,
+    "password": process.env.DB_PASSWORD,
     "database": "master"
 };
 
