@@ -190,12 +190,12 @@ class MSSqlAdapter {
                                 try {
                                     if (err) {
                                         if (self.transaction) {
-                                            return self.transaction.rollback(function(err) {
+                                            return self.transaction.rollback(function(rollbackErr) {
                                                 self.transaction = null;
-                                                if (err) {
-                                                    return callback(err);
+                                                if (rollbackErr) {
+                                                    return callback(rollbackErr);
                                                 }
-                                                return callback();
+                                                return callback(err);
                                             });
                                         }
                                         return callback(err);
@@ -207,12 +207,12 @@ class MSSqlAdapter {
                                         }
                                         self.transaction.commit(function (err) {
                                             if (err) {
-                                                return self.transaction.rollback(function(err) {
+                                                return self.transaction.rollback(function(rollbackErr) {
                                                     self.transaction = null;
-                                                    if (err) {
-                                                        return callback(err);
+                                                    if (rollbackErr) {
+                                                        return callback(rollbackErr);
                                                     }
-                                                    return callback();
+                                                    return callback(err);
                                                 });
                                             }
                                             self.transaction = null;
