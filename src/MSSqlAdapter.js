@@ -185,8 +185,8 @@ class MSSqlAdapter {
                 self.transaction.begin(function (err) {
                     //error check (?)
                     if (err) {
-                        TraceUtils.log(err);
-                        callback.call(self, err);
+                        TraceUtils.error(err);
+                        return callback(err);
                     }
                     else {
                         try {
@@ -194,43 +194,42 @@ class MSSqlAdapter {
                                 try {
                                     if (err) {
                                         if (self.transaction) {
-                                            return self.transaction.rollback(function(err) {
+                                            return self.transaction.rollback(function(rollbackErr) {
                                                 self.transaction = null;
-                                                if (err) {
-                                                    return callback(err);
+                                                if (rollbackErr) {
+                                                    return callback(rollbackErr);
                                                 }
-                                                return callback();
+                                                return callback(err);
                                             });
                                         }
-                                        callback.call(self, err);
+                                        return callback(err);
                                     }
                                     else {
                                         if (typeof self.transaction === 'undefined' || self.transaction === null) {
-                                            callback.call(self, new Error('Database transaction cannot be empty on commit.'));
-                                            return;
+                                            return callback(new Error('Database transaction cannot be empty on commit.'));
                                         }
                                         self.transaction.commit(function (err) {
                                             if (err) {
-                                                return self.transaction.rollback(function(err) {
+                                                return self.transaction.rollback(function(rollbackErr) {
                                                     self.transaction = null;
-                                                    if (err) {
-                                                        return callback(err);
+                                                    if (rollbackErr) {
+                                                        return callback(rollbackErr);
                                                     }
-                                                    return callback();
+                                                    return callback(err);
                                                 });
                                             }
                                             self.transaction = null;
-                                            callback.call(self, err);
+                                            return callback(err);
                                         });
                                     }
                                 }
                                 catch (e) {
-                                    callback.call(self, e);
+                                    return callback(e);
                                 }
                             });
                         }
                         catch (e) {
-                            callback.call(self, e);
+                            return callback(e);
                         }
                     }
                 });
