@@ -117,7 +117,7 @@ class MSSqlFormatter extends SqlFormatter {
         if (value === null || typeof value === 'undefined')
             return SqlUtils.escape(null);
         if (typeof value === 'string')
-            return '\'' + value.replace(/'/g, "''") + '\'';
+            return 'N\'' + value.replace(/'/g, "''") + '\'';
         if (typeof value === 'boolean')
             return value ? '1' : '0';
         if (typeof value === 'object') {
