@@ -290,6 +290,32 @@ class MSSqlFormatter extends SqlFormatter {
         return sprintf('(CASE WHEN %s THEN %s ELSE %s END)', ifExpression, this.escape(thenExpr), this.escape(elseExpr));
     }
 
+    /**
+     * @param {*} expr
+     * @return {string}
+     */
+    $jsonGet(expr) {
+        if (typeof expr.$name !== 'string') {
+            throw new Error('Invalid json expression. Expected a string');
+        }
+        const parts = expr.$name.split('.');
+        const extract = this.escapeName(parts.splice(0, 2).join('.'));
+        return `JSON_VALUE(${extract}, '$.${parts.join('.')}')`;
+    }
+
+    /**
+     * @param {*} expr
+     * @return {string}
+     */
+    $jsonArray(expr) {
+        if (typeof expr.$name !== 'string') {
+            throw new Error('Invalid json expression. Expected a string');
+        }
+        const parts = expr.$name.split('.');
+        const extract = this.escapeName(parts.splice(0, 2).join('.'));
+        return `JSON_QUERY(${extract}, '$.${parts.join('.')}')`;
+    }
+
 }
 
 export {
