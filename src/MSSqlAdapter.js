@@ -511,6 +511,9 @@ class MSSqlAdapter {
                 else
                     s = 'text';
                 break;
+            case 'Json':
+                s = 'nvarchar(max)';
+                break;
             case 'Image':
             case 'Binary':
                 s = 'binary';
