@@ -316,6 +316,10 @@ class MSSqlFormatter extends SqlFormatter {
         return `JSON_QUERY(${extract}, '$.${parts.join('.')}')`;
     }
 
+    $uuid() {
+        return 'NEWID()'
+    }
+
 }
 
 export {
