@@ -325,7 +325,7 @@ class MSSqlFormatter extends SqlFormatter {
     }
 
     $toInt(expr) {
-        return sprintf('ROUND(CAST(%s AS FLOAT), 0)', this.escape(expr));
+        return sprintf('CAST(%s AS INT)', this.escape(expr));
     }
 
     $toDouble(expr) {
@@ -345,7 +345,7 @@ class MSSqlFormatter extends SqlFormatter {
     }
 
     $toLong(expr) {
-        return sprintf('ROUND(CAST(%s AS FLOAT), 0)', this.escape(expr));
+        return sprintf('CAST(%s AS BIGINT)', this.escape(expr));
     }
 
 }
