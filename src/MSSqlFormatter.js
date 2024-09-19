@@ -319,6 +319,7 @@ class MSSqlFormatter extends SqlFormatter {
     $uuid() {
         return 'NEWID()'
     }
+    
 
     $toGuid(expr) {
         return sprintf('dbo.BIN_TO_UUID(HASHBYTES(\'MD5\',CONVERT(VARCHAR(MAX), %s)))', this.escape(expr));
@@ -346,6 +347,14 @@ class MSSqlFormatter extends SqlFormatter {
 
     $toLong(expr) {
         return sprintf('CAST(%s AS BIGINT)', this.escape(expr));
+    }
+
+    $now() {
+        return 'GETDATE()';
+    }
+
+    $currentDate() {
+        return 'GETDATE()';
     }
 
 }
