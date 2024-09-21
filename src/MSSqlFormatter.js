@@ -349,12 +349,22 @@ class MSSqlFormatter extends SqlFormatter {
         return sprintf('CAST(%s AS BIGINT)', this.escape(expr));
     }
 
-    $now() {
-        return 'GETDATE()';
-    }
-
-    $currentDate() {
-        return 'GETDATE()';
+    /**
+     * 
+     * @param {('date'|'datetime'|'timestamp')} type 
+     * @returns 
+     */
+    $getDate(type) {
+        switch (type) {
+            case 'date':
+                return 'CAST(GETDATE() AS DATE)';
+            case 'datetime':
+                return 'CAST(GETDATE() AS DATETIME)';
+            case 'timestamp':
+                return 'CAST(GETDATE() AS DATETIMEOFFSET)';
+            default:
+                return 'GETDATE()'
+        }
     }
 
 }

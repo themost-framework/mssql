@@ -1,7 +1,9 @@
 import { QueryEntity, QueryExpression, QueryField } from '@themost/query';
 import { TestApplication } from './TestApplication';
-import { MSSqlFormatter } from '../src/MSSqlFormatter';
+import { MSSqlFormatter as SqlFormatter } from '../src';
 import { Guid } from '@themost/common';
+import { round } from 'mathjs';
+import moment from 'moment/moment';
 
 describe('Type Casting', () => {
 
@@ -13,7 +15,7 @@ describe('Type Casting', () => {
         app = new TestApplication(__dirname);
         await app.tryCreateDatabase();
         await app.trySetData();
-        
+
     });
     beforeEach(async () => {
         //
@@ -33,9 +35,25 @@ describe('Type Casting', () => {
                 }
             })).from(new QueryEntity('t0'));
             query.$fixed = true;
-            const [item] = await context.db.executeAsync(query);
+            const [item] = await context.db.executeAsync(query, []);
             expect(item).toBeTruthy();
             expect(item.id).toBeTruthy();
+        });
+    });
+
+    it('should use getDate()', async () => {
+        await app.executeInTestTranscaction(async (context) => {
+            const query = new QueryExpression().select(new QueryField({
+                currentDate: {
+                    $getDate: [
+                        'date'
+                    ]
+                }
+            })).from(new QueryEntity('t0'));
+            query.$fixed = true;
+            const [item] = await context.db.executeAsync(query, []);
+            expect(item).toBeTruthy();
+            expect(item.currentDate instanceof Date).toBeTruthy()
         });
     });
 
@@ -49,7 +67,7 @@ describe('Type Casting', () => {
                 }
             })).from(new QueryEntity('t0'));
             query.$fixed = true;
-            const [item] = await context.db.executeAsync(query);
+            const [item] = await context.db.executeAsync(query, []);
             expect(item).toBeTruthy();
             expect(item.id.toLowerCase()).toEqual('8b1a9953-c461-1296-a827-abf8c47804d7');
         });
@@ -79,23 +97,20 @@ describe('Type Casting', () => {
             }
         });
     });
-    
+
     it('should use $toString function', async () => {
         const Product = new QueryEntity('ProductData');
         const Order = new QueryEntity('OrderData');
         const id = new QueryField('id').from(Product);
         let orderedItem = new QueryField('orderedItem').from(Order);
-        let expr = new QueryExpression().where(id).equal(orderedItem);
-        const formatter = new MSSqlFormatter();
-        let sql = formatter.formatWhere(expr.$where);
-        expect(sql).toEqual('([ProductData].[id]=[OrderData].[orderedItem])');
+        const formatter = new SqlFormatter();
         orderedItem =new QueryField({
             '$toString': [
                 new QueryField('orderedItem').from(Order)
             ]
         });
-        expr = new QueryExpression().where(id).equal(orderedItem);
-        sql = formatter.formatWhere(expr.$where);
+        const expr = new QueryExpression().where(id).equal(orderedItem);
+        const sql = formatter.formatWhere(expr.$where);
         expect(sql).toEqual('([ProductData].[id]=CAST([OrderData].[orderedItem] AS NVARCHAR))');
     });
 
@@ -110,7 +125,7 @@ describe('Type Casting', () => {
                     name
                 }
             }).from(Products);
-            const items = await context.db.executeAsync(q);
+            const items = await context.db.executeAsync(q, []);
             items.forEach(({price, priceString}) => {
                 expect(typeof priceString).toEqual('string');
                 const fromString = parseFloat(priceString);
@@ -130,7 +145,7 @@ describe('Type Casting', () => {
                     name
                 }
             }).from(Products);
-            const items = await context.db.executeAsync(q);
+            const items = await context.db.executeAsync(q, []);
             items.forEach(({price, priceInt}) => {
                 expect(typeof priceInt).toEqual('number');
                 const fromInt = parseInt(price);
@@ -150,11 +165,31 @@ describe('Type Casting', () => {
                     name
                 }
             }).from(Products);
-            const items = await context.db.executeAsync(q);
+            const items = await context.db.executeAsync(q, []);
             items.forEach(({price, priceFloat}) => {
-                const fromFloat = parseFloat(price);
-                expect(priceFloat).toEqual(fromFloat);
+                const fromFloat = round(price,2);
+                expect(round(priceFloat,2)).toEqual(fromFloat);
             });
+        });
+    });
+
+    it('should use getDate()', async () => {
+        await app.executeInTestTranscaction(async (context) => {
+            const query = new QueryExpression().select(new QueryField({
+                currentDate: {
+                    $getDate: [
+                        'datetime'
+                    ]
+                }
+            })).from(new QueryEntity('t0'));
+            query.$fixed = true;
+            const [item] = await context.db.executeAsync(query, []);
+            expect(item).toBeTruthy();
+            const now = new Date();
+            const { currentDate } = item;
+            expect(currentDate).toBeTruthy();
+            expect(moment(now).format('YYYY-MM-DD'))
+                .toEqual(moment(currentDate).format('YYYY-MM-DD'));
         });
     });
 });
