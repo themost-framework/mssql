@@ -45,7 +45,16 @@ class MSSqlFormatter extends SqlFormatter {
             if (keys.length === 0)
                 throw new Error('Entity is missing');
             const queryfields = obj.$select[keys[0]], order = obj.$order;
-            queryfields.push(util.format('ROW_NUMBER() OVER(%s) AS __RowIndex', order ? self.format(order, '%o') : 'ORDER BY (SELECT NULL)'));
+            const rowIndex = Object.assign(new QueryField(), {
+                // use alias
+                __RowIndex: {
+                    // use row index func
+                    $rowIndex: [
+                        order // set order or null
+                    ]
+                }
+            });
+            queryfields.push(rowIndex);
             if (order)
                 delete obj.$order;
             const subQuery = self.formatSelect(obj);
@@ -191,6 +200,17 @@ class MSSqlFormatter extends SqlFormatter {
      */
     $trim(p0) {
         return util.format('LTRIM(RTRIM((%s)))', this.escape(p0));
+    }
+
+    /**
+     * @param {*=} order 
+     * @returns {string}
+     */
+    $rowIndex(order) {
+        if (order == null) {
+            return 'ROW_NUMBER() OVER(ORDER BY (SELECT NULL))';
+        }
+        return util.format('ROW_NUMBER() OVER(%s)', this.format(order, '%o'));
     }
 
     $ifnull(p0, p1) {
