@@ -9,7 +9,7 @@ const mssql = require('mssql');
 const async = require('async');
 const util = require('util');
 const { TraceUtils } = require('@themost/common');
-const { QueryExpression, SqlUtils } = require('@themost/query');
+const { SqlUtils } = require('@themost/query');
 const { MSSqlFormatter } = require('./MSSqlFormatter');
 const { TransactionIsolationLevelFormatter } = require('./TransactionIsolationLevel')
 /**
@@ -270,15 +270,15 @@ class MSSqlAdapter {
         const db = inTransaction ? new MSSqlAdapter(this.options) : this;
         // create migration schema
         const migration = {
-            "appliesTo": "increment_id",
-            "model": "increments",
-            "version": "1.0",
-            "description": "Increments migration (version 1.0)",
-            "add": [
-                { "name": "id", "type": "Counter", "primary": true },
-                { "name": "entity", "type": "Text", "size": 120 },
-                { "name": "attribute", "type": "Text", "size": 120 },
-                { "name": "value", "type": "Integer" }
+            'appliesTo': 'increment_id',
+            'model': 'increments',
+            'version': '1.0',
+            'description': 'Increments migration (version 1.0)',
+            'add': [
+                { 'name': 'id', 'type': 'Counter', 'primary': true },
+                { 'name': 'entity', 'type': 'Text', 'size': 120 },
+                { 'name': 'attribute', 'type': 'Text', 'size': 120 },
+                { 'name': 'value', 'type': 'Integer' }
             ]
         };
         //ensure increments entity
@@ -495,6 +495,9 @@ class MSSqlAdapter {
             case 'Short':
                 s = 'smallint';
                 break;
+            case 'Json':
+                s = 'nvarchar(max)';
+                break;
             default:
                 s = 'int';
                 break;
@@ -594,12 +597,12 @@ class MSSqlAdapter {
              */
             columns: function (callback) {
                 callback = callback || function () { };
-                self.execute("SELECT c0.[name] AS [name], c0.[isnullable] AS [nullable], c0.[length] AS [size], c0.[prec] AS [precision], " +
-                    "c0.[scale] AS [scale], t0.[name] AS type, t0.[name] + CASE WHEN t0.[variable]=0 THEN '' ELSE '(' + CONVERT(varchar,c0.[length]) + ')' END AS [type1], " +
-                    "CASE WHEN p0.[indid]>0 THEN 1 ELSE 0 END [primary] FROM syscolumns c0  INNER JOIN systypes t0 ON c0.[xusertype] = t0.[xusertype] " +
-                    "INNER JOIN  sysobjects s0 ON c0.[id]=s0.[id]  LEFT JOIN (SELECT k0.* FROM sysindexkeys k0 INNER JOIN (SELECT i0.* FROM sysindexes i0 " +
-                    "INNER JOIN sysobjects s0 ON i0.[id]=s0.[id]  WHERE i0.[status]=2066) x0  ON k0.[id]=x0.[id] AND k0.[indid]=x0.[indid] ) p0 ON c0.[id]=p0.[id] " +
-                    "AND c0.[colid]=p0.[colid]  WHERE s0.[name]=? AND s0.[xtype]='U' AND SCHEMA_NAME(s0.[uid])=?", [table, owner], function (err, result) {
+                self.execute('SELECT c0.[name] AS [name], c0.[isnullable] AS [nullable], c0.[length] AS [size], c0.[prec] AS [precision], ' +
+                    'c0.[scale] AS [scale], t0.[name] AS type, t0.[name] + CASE WHEN t0.[variable]=0 THEN \'\' ELSE \'(\' + CONVERT(varchar,c0.[length]) + \')\' END AS [type1], ' +
+                    'CASE WHEN p0.[indid]>0 THEN 1 ELSE 0 END [primary] FROM syscolumns c0  INNER JOIN systypes t0 ON c0.[xusertype] = t0.[xusertype] ' +
+                    'INNER JOIN  sysobjects s0 ON c0.[id]=s0.[id]  LEFT JOIN (SELECT k0.* FROM sysindexkeys k0 INNER JOIN (SELECT i0.* FROM sysindexes i0 ' +
+                    'INNER JOIN sysobjects s0 ON i0.[id]=s0.[id]  WHERE i0.[status]=2066) x0  ON k0.[id]=x0.[id] AND k0.[indid]=x0.[indid] ) p0 ON c0.[id]=p0.[id] ' +
+                    'AND c0.[colid]=p0.[colid]  WHERE s0.[name]=? AND s0.[xtype]=\'U\' AND SCHEMA_NAME(s0.[uid])=?', [table, owner], function (err, result) {
                         if (err) {
                             return callback(err);
                         }
@@ -834,7 +837,7 @@ class MSSqlAdapter {
                         }
                         try {
                             const formatter = new MSSqlFormatter();
-                            const sql = "EXECUTE('" + util.format('CREATE VIEW %s.%s AS ', formatter.escapeName(owner), formatter.escapeName(view)) + formatter.format(q) + "')";
+                            const sql = 'EXECUTE(\'' + util.format('CREATE VIEW %s.%s AS ', formatter.escapeName(owner), formatter.escapeName(view)) + formatter.format(q) + '\')';
                             self.execute(sql, [], tr);
                         }
                         catch (e) {
@@ -868,7 +871,7 @@ class MSSqlAdapter {
         const self = this;
         const migration = obj;
         if (migration.appliesTo == null)
-            throw new Error("Invalid argument. Model name is undefined.");
+            throw new Error('Invalid argument. Model name is undefined.');
         self.open(function (err) {
             if (err) {
                 callback.bind(self)(err);
@@ -1063,6 +1066,7 @@ class MSSqlAdapter {
      */
     database(name) {
         const self = this;
+        const formatter = new MSSqlFormatter();
         let db = name;
         let owner = 'dbo';
         const matches = /(\w+)\.(\w+)/.exec(name);
@@ -1072,10 +1076,7 @@ class MSSqlAdapter {
         }
         return {
             exists: function (callback) {
-                const query = new QueryExpression().from('sys.databases').where('name').equal(db)
-                    .and('SCHEMA_NAME(owner_sid)').equal(owner)
-                    .select('name');
-                self.execute(query, null, (err, res) => {
+                self.execute(`SELECT [name] FROM sys.databases WHERE [name]=${formatter.escape(db)} AND SCHEMA_NAME(owner_sid)=${formatter.escape(owner)}`, null, (err, res) => {
                     if (err) {
                         return callback(err);
                     }
@@ -1093,10 +1094,7 @@ class MSSqlAdapter {
                 });
             },
             create: function (callback) {
-                const query = new QueryExpression().from('sys.databases').where('name').equal(db)
-                    .and('SCHEMA_NAME(owner_sid)').equal(owner)
-                    .select('name');
-                self.execute(query, null, (err, res) => {
+                self.execute(`SELECT [name] FROM sys.databases WHERE [name]=${formatter.escape(db)} AND SCHEMA_NAME(owner_sid)=${formatter.escape(owner)}`, null, (err, res) => {
                     if (err) {
                         return callback(err);
                     }

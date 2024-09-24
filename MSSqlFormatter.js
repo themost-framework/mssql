@@ -6,7 +6,7 @@
  * found in the LICENSE file at https://themost.io/license
  */
 const util = require('util');
-const { QueryField, QueryUtils, SqlUtils, SqlFormatter } = require('@themost/query');
+const { QueryField, QueryExpression, SqlFormatter, ObjectNameValidator } = require('@themost/query');
 
 function zeroPad(number, length) {
     number = number || 0;
@@ -114,32 +114,20 @@ class MSSqlFormatter extends SqlFormatter {
      * @param {boolean=} unquoted
      */
     escape(value, unquoted) {
-        if (value === null || typeof value === 'undefined')
-            return SqlUtils.escape(null);
-        if (typeof value === 'string')
-            return 'N\'' + value.replace(/'/g, "''") + '\'';
-        if (typeof value === 'boolean')
+        if (typeof ObjectNameValidator === 'undefined') {
+            throw new Error('ObjectNameValidator is required for using the current version of MSSQL adapter. Consider updating project dependencies.');
+        }
+        if (typeof value === 'boolean') {
             return value ? '1' : '0';
-        if (typeof value === 'object') {
-            //add an exception for Date object
-            if (value instanceof Date)
-                return this.escapeDate(value);
-            if (value.hasOwnProperty('$name'))
-                return this.escapeName(value.$name);
         }
-        if (unquoted)
-            return value.valueOf();
-        else
-            return SqlUtils.escape(value);
-    }
-    escapeName(name) {
-        if (typeof name === 'string') {
-            if (/^(\w+)\.(\w+)$/g.test(name)) {
-                return name.replace(/(\w+)/g, "[$1]");
-            }
-            return name.replace(/(\w+)$|^(\w+)$/g, "[$1]");
+        if (value instanceof Date) {
+            return this.escapeDate(value);
         }
-        return name;
+        if (typeof value === 'string') {
+            const str = value.replace(/'/g, '\'\'');
+            return unquoted ? str : ('N\'' + str + '\'');
+        }
+        return super.escape.bind(this)(value, unquoted);
     }
     /**
      * @param {Date|*} val
@@ -155,7 +143,7 @@ class MSSqlFormatter extends SqlFormatter {
         const millisecond = zeroPad(val.getMilliseconds(), 3);
         //format timezone
         const offset = val.getTimezoneOffset(), timezone = (offset <= 0 ? '+' : '-') + zeroPad(-Math.floor(offset / 60), 2) + ':' + zeroPad(offset % 60, 2);
-        return "CONVERT(datetimeoffset,'" + year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second + "." + millisecond + timezone + "')";
+        return 'CONVERT(datetimeoffset,\'' + year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second + '.' + millisecond + timezone + '\')';
     }
     /**
      * Implements startsWith(a,b) expression formatter.
@@ -203,6 +191,114 @@ class MSSqlFormatter extends SqlFormatter {
      */
     $trim(p0) {
         return util.format('LTRIM(RTRIM((%s)))', this.escape(p0));
+    }
+
+    $ifnull(p0, p1) {
+        return util.format('ISNULL(%s, %s)', this.escape(p0), this.escape(p1));
+    }
+
+    $ifNull(p0, p1) {
+        return util.format('ISNULL(%s, %s)', this.escape(p0), this.escape(p1));
+    }
+
+    isLogical(obj) {
+        for (const key in obj) {
+            return (/^\$(and|or|not|nor)$/g.test(key));
+        }
+        return false;
+    }
+
+    $cond(ifExpr, thenExpr, elseExpr) {
+        // validate ifExpr which should an instance of QueryExpression or a comparison expression
+        let ifExpression;
+        if (ifExpr instanceof QueryExpression) {
+            ifExpression = this.formatWhere(ifExpr.$where);
+        } else if (this.isComparison(ifExpr) || this.isLogical(ifExpr)) {
+            ifExpression = this.formatWhere(ifExpr);
+        } else {
+            throw new Error('Condition parameter should be an instance of query or comparison expression');
+        }
+        return util.format('(CASE WHEN %s THEN %s ELSE %s END)', ifExpression, this.escape(thenExpr), this.escape(elseExpr));
+    }
+
+    /**
+     * @param {*} expr
+     * @return {string}
+     */
+    $jsonGet(expr) {
+        if (typeof expr.$name !== 'string') {
+            throw new Error('Invalid json expression. Expected a string');
+        }
+        const parts = expr.$name.split('.');
+        const extract = this.escapeName(parts.splice(0, 2).join('.'));
+        return `JSON_VALUE(${extract}, '$.${parts.join('.')}')`;
+    }
+
+    /**
+     * @param {*} expr
+     * @return {string}
+     */
+    $jsonArray(expr) {
+        if (typeof expr.$name !== 'string') {
+            throw new Error('Invalid json expression. Expected a string');
+        }
+        const parts = expr.$name.split('.');
+        const extract = this.escapeName(parts.splice(0, 2).join('.'));
+        return `JSON_QUERY(${extract}, '$.${parts.join('.')}')`;
+    }
+
+    $uuid() {
+        return 'NEWID()'
+    }
+
+    $toString(p0) {
+        return util.format('CAST(%s AS NVARCHAR)', this.escape(p0));
+    }
+    
+    $toGuid(expr) {
+        return util.format('dbo.BIN_TO_UUID(HASHBYTES(\'MD5\',CONVERT(VARCHAR(MAX), %s)))', this.escape(expr));
+    }
+
+    $toInt(expr) {
+        return util.format('FLOOR(CAST(%s AS DECIMAL(19,8)))', this.escape(expr));
+    }
+
+    $toDouble(expr) {
+        return this.$toDecimal(expr, 19, 8);
+    }
+
+    /**
+     * @param {*} expr 
+     * @param {number=} precision 
+     * @param {number=} scale 
+     * @returns 
+     */
+    $toDecimal(expr, precision, scale) {
+        const p = typeof precision === 'number' ? parseInt(precision,10) : 19;
+        const s = typeof scale === 'number' ? parseInt(scale,10) : 8;
+        return util.format('CAST(%s as DECIMAL(%s,%s))', this.escape(expr), p, s);
+    }
+
+    $toLong(expr) {
+        return util.format('CAST(%s AS BIGINT)', this.escape(expr));
+    }
+
+    /**
+     * 
+     * @param {('date'|'datetime'|'timestamp')} type 
+     * @returns 
+     */
+    $getDate(type) {
+        switch (type) {
+            case 'date':
+                return 'CAST(GETDATE() AS DATE)';
+            case 'datetime':
+                return 'CAST(GETDATE() AS DATETIME)';
+            case 'timestamp':
+                return 'CAST(GETDATE() AS DATETIMEOFFSET)';
+            default:
+                return 'GETDATE()'
+        }
     }
 }
 
