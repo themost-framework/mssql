@@ -4,7 +4,8 @@
   "description": "MOST Web Framework MSSQL Data Adapter",
   "main": "index.js",
   "scripts": {
-    "test": "jasmine"
+    "test": "jasmine",
+    "lint": "eslint *.js"
   },
   "engines": {
     "node": ">=8"
@@ -36,13 +37,16 @@
     "@themost/query": "~2.5.23"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.1.0",
+    "@eslint/js": "^9.11.0",
     "@themost/common": "^2.11.0",
     "@themost/query": "^2.5.23",
     "@themost/sqlite": "^2.7.3",
     "@types/jasmine": "^3.5.14",
     "dotenv": "^8.2.0",
-    "eslint": "^9.11.0",
+    "eslint": "^8.57.1",
     "eslint-plugin-node": "^11.1.0",
+    "globals": "^15.9.0",
     "jasmine": "^5.3.0",
     "jasmine-spec-reporter": "^5.0.2",
     "mathjs": "^13.1.1",

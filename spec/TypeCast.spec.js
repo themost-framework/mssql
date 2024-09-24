@@ -1,9 +1,7 @@
 const { QueryEntity, QueryExpression, QueryField } = require('@themost/query');
-const { MSSqlFormatter, MSSqlAdapter } = require('../index');
-const { Guid } = require('@themost/common');
-const { round } = require('mathjs');
+const { MSSqlAdapter } = require('../index');
 const moment = require('moment/moment');
-const { tryCreateTestDatabase, tryDropTestDatabase, masterConnectionOptions, testConnectionOptions } = require('./utils');
+const { tryCreateTestDatabase, tryDropTestDatabase, testConnectionOptions } = require('./utils');
 
 describe('Type Casting', () => {
 
