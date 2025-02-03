@@ -26,7 +26,7 @@ describe('ArithmeticFunctions', () => {
         await app.executeInTestTranscaction(async (context) => {
             let items = await context.model('Product')
                 .asQueryable().where('price').add(10.5).greaterThan(100).take(10).getItems();
-            expect(items).toBeInstanceOf(Array);
+            expect(Array.isArray(items)).toBeTruthy();
             for (const item of items) {
                 expect(item.price + 10.5).toBeGreaterThan(100);
             }
@@ -37,7 +37,7 @@ describe('ArithmeticFunctions', () => {
         await app.executeInTestTranscaction(async (context) => {
             let items = await context.model('Product')
                 .asQueryable().where('price').subtract(10.5).lowerThan(100).take(10).getItems();
-            expect(items).toBeInstanceOf(Array);
+            expect(Array.isArray(items)).toBeTruthy();
             for (const item of items) {
                 expect(item.price - 10.5).toBeLessThan(100);
             }
@@ -51,7 +51,7 @@ describe('ArithmeticFunctions', () => {
                 .where('category').equal('Laptops')
                 .and('price').multiply(0.75)
                 .lowerThan(1000).take(10).getItems();
-            expect(items).toBeInstanceOf(Array);
+            expect(Array.isArray(items)).toBeTruthy();
             expect(items.length).toBeTruthy();
             for (const item of items) {
                 expect(item.price * 0.75).toBeLessThan(1000);
@@ -66,7 +66,7 @@ describe('ArithmeticFunctions', () => {
                 .where('category').equal('Laptops')
                 .and('price').multiply(1.25)
                 .lowerThan(1000).take(10).getItems();
-            expect(items).toBeInstanceOf(Array);
+            expect(Array.isArray(items)).toBeTruthy();
             expect(items.length).toBeTruthy();
             for (const item of items) {
                 expect(item.price / 1.25).toBeLessThan(1000);
@@ -81,7 +81,7 @@ describe('ArithmeticFunctions', () => {
                 .where('category').equal('Printers')
                 .and('price').ceil()
                 .equal(461).getItems();
-            expect(items).toBeInstanceOf(Array);
+            expect(Array.isArray(items)).toBeTruthy();
             expect(items.length).toBeGreaterThan(0);
             for (const item of items) {
                 expect(Math.ceil(item.price)).toEqual(461);
@@ -96,7 +96,7 @@ describe('ArithmeticFunctions', () => {
                 .where('category').equal('Printers')
                 .and('price').round()
                 .greaterOrEqual(460).getItems();
-            expect(items).toBeInstanceOf(Array);
+            expect(Array.isArray(items)).toBeTruthy();
             expect(items.length).toBeGreaterThan(0);
             for (const item of items) {
                 expect(Math.round(item.price)).toBeGreaterThanOrEqual(460);
@@ -111,7 +111,7 @@ describe('ArithmeticFunctions', () => {
                 .where('category').equal('Printers')
                 .and('price').floor()
                 .equal(460).getItems();
-            expect(items).toBeInstanceOf(Array);
+            expect(Array.isArray(items)).toBeTruthy();
             expect(items.length).toBeGreaterThan(0);
             for (const item of items) {
                 expect(Math.floor(item.price)).toEqual(460);
