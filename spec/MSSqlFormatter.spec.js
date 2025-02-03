@@ -16,7 +16,7 @@ describe('MSSqlFormatter', () => {
         //
     });
     afterAll(async () => {
-        await app.finalize();
+        await app.finalizeAsync();
     });
     afterEach(async () => {
         //
@@ -25,7 +25,7 @@ describe('MSSqlFormatter', () => {
     it('should get data', async () => {
         await app.executeInTestTranscaction(async (context) => {
             const items = await context.model('ActionStatusType').silent().getItems();
-            expect(items).toBeInstanceOf(Array);
+            expect(Array.isArray(items)).toBeTruthy();
             expect(items.length).toBeTruthy();
         });
     });
@@ -51,7 +51,7 @@ describe('MSSqlFormatter', () => {
             const items = await context.model('Person').asQueryable()
                 .orderBy('id')
                 .take(5).silent().getItems();
-            expect(items).toBeInstanceOf(Array);
+            expect(Array.isArray(items)).toBeTruthy();
             expect(items.length).toBe(5);
             const moreItems = await context.model('Person').asQueryable()
                 .orderBy('id')
@@ -118,7 +118,7 @@ describe('MSSqlFormatter', () => {
                     'count(id) as total'
                 ).groupBy('orderedItem/name')
                 .getItems();
-            expect(items).toBeInstanceOf(Array);
+            expect(Array.isArray(items)).toBeTruthy();
             expect(items.length).toBeGreaterThan(0);
         });
     });

@@ -13,7 +13,7 @@ describe('ConditionExpression', () => {
         await app.trySetData();
     });
     afterAll(async () => {
-        //
+        await app.finalizeAsync();
     })
     
     it('should use condition in select query', async () => {

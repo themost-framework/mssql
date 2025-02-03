@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "experimentalDecorators": true,
+        "paths": {
+            "@themost/mssql/n": [
+                "src/n/index"
+            ],
+            "@themost/mssql": [
+                "src/index"
+            ]
+        }
+    }
+}

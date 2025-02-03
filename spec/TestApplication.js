@@ -62,12 +62,10 @@ class TestApplication extends DataApplication {
         // add adapter type
         const name = 'MSSQL Data Adapter';
         const invariantName = 'mssql';
-        Object.assign(dataConfiguration.adapterTypes, {
-            mssql: {
-                name,
-                invariantName,
-                createInstance
-            }
+        dataConfiguration.adapterTypes.set(invariantName, {
+            name,
+            invariantName,
+            createInstance
         });
         dataConfiguration.adapters.push({
             name: 'master',
@@ -101,6 +99,10 @@ class TestApplication extends DataApplication {
         }
     }
 
+    async finalizeAsync() {
+        return this.finalize();
+    }
+
     /**
      * @param {TestContextFunction} func 
      */
@@ -108,9 +110,10 @@ class TestApplication extends DataApplication {
         const context = this.createContext();
         try {
             await func(context);
-        } catch (err) {
-            await context.finalizeAsync();
-            throw err;
+        } finally {
+            if (context) {
+                await context.finalizeAsync();
+            }
         }
     }
 
@@ -187,11 +190,10 @@ class TestApplication extends DataApplication {
                 }
             });
             await context.finalizeAsync();
-        } catch (error) {
+        } finally {
             if (context) {
                 await context.finalizeAsync();
             }
-            throw error;
         }
     }
 
@@ -271,11 +273,10 @@ class TestApplication extends DataApplication {
                 version: '1.0'
             }).into('migrations'));
             await context.finalizeAsync();
-        } catch (error) {
+        } finally {
             if (context) {
                 await context.finalizeAsync();
             }
-            throw error;
         }
     }
 
