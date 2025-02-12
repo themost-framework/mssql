@@ -128,7 +128,7 @@ class MSSqlFormatter extends SqlFormatter {
         return sprintf('PATINDEX(%s,%s) >= 1', this.escape(s1), this.escape(p0));
     }
     $date(p0) {
-        return sprintf(' TODATETIMEOFFSET (%s,datepart(TZ,SYSDATETIMEOFFSET()))', this.escape(p0));
+        return this.$toDate(p0, 'date');
     }
     /**
      * Escapes an object or a value and returns the equivalent sql value.
@@ -463,6 +463,25 @@ class MSSqlFormatter extends SqlFormatter {
             return this.escape(expr);
         }
         throw new Error('Invalid json array expression. Expected a valid select expression');
+    }
+
+    /**
+     * Converts the give expression to a date, datetime or timestamp value
+     * @param {*} arg
+     * @param {('date'|'datetime'|'timestamp')} type 
+     * @returns 
+     */
+    $toDate(arg, type) {
+        switch (type) {
+            case 'date':
+                return sprintf('CAST(%s AS DATE)', this.escape(arg));
+            case 'datetime':
+                return sprintf('CAST(%s AS DATETIME)', this.escape(arg));
+            case 'timestamp':
+                return sprintf('TODATETIMEOFFSET(%s,datepart(TZ,SYSDATETIMEOFFSET()))', this.escape(arg));
+            default:
+                return sprintf('TODATETIMEOFFSET(%s,datepart(TZ,SYSDATETIMEOFFSET()))', this.escape(arg));
+        }
     }
 
 }
