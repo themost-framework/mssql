@@ -13,9 +13,9 @@ const testConnectionOptions = {
     'database': 'test_db',
     'timezone': 'Europe/Athens',
      'pool': {
-        'max': 10,
+        'max': 25,
         'min': 0,
-        'idleTimeoutMillis': 30000
+        'idleTimeoutMillis': 45000
       },
     'options': {
         'encrypt': false,
@@ -104,6 +104,18 @@ class TestApplication extends DataApplication {
         }
         const context = this.createContext();
         if (typeof context.db.finalizeConnectionPoolAsync === 'function') {
+            /**
+             * @type {import('generic-pool').Pool}
+             */
+            const pool = context.db.getConnectionPool();
+            if (pool) {
+                TraceUtils.log('Analyzing connection pool');
+                TraceUtils.log(JSON.stringify({
+                    available: pool.available,
+                    borrowed: pool.borrowed,
+                    size: pool.size
+                }));
+            }
             await context.db.finalizeConnectionPoolAsync();
         }
     }

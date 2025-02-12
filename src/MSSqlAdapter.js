@@ -1489,7 +1489,8 @@ class MSSqlAdapter {
      * @returns {import('generic-pool').Pool}
      */
     getConnectionPool() {
-        new MSSqlConnectionPoolManager().pools.get(this.id);
+        const manager = new MSSqlConnectionPoolManager();
+        return manager.pools.get(this.id);
     }
 
     finalizeConnectionPool(callback) {

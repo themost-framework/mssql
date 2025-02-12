@@ -1,9 +1,9 @@
 import { DataAdapterBase, DataAdapterBaseHelper, DataAdapterDatabase, DataAdapterIndexes, DataAdapterMigration, DataAdapterTable, DataAdapterView } from '@themost/common';
-import { Pool } from 'generic-pool'
+import { ConnectionPool } from 'mssql';
 export declare class MSSqlConnectionPoolManager {
-    pools: Map<string, Pool<any>>;
-    get(options: any, callback: (err?: Error, connection?: Pool<any>) => void): void;
-    getAsync(options: any): Promise<Pool<any>>;
+    pools: Map<string, ConnectionPool>;
+    get(options: any, callback: (err?: Error, connection?: ConnectionPool) => void): void;
+    getAsync(options: any): Promise<ConnectionPool>;
     finalize(callback: (err?: Error) => void): void;
     finalizeAsync(options: any): Promise<void>;
 }
@@ -33,7 +33,7 @@ export declare class MSSqlAdapter implements DataAdapterBase, DataAdapterBaseHel
     view(name: string): DataAdapterView;
     indexes(name: string): DataAdapterIndexes;
     database(name: string): DataAdapterDatabase;
-    getConnectionPool(): Pool<any>;
+    getConnectionPool(): ConnectionPool;
     finalizeConnectionPool(callback: (err?: Error) => void): void;
     finalizeConnectionPoolAsync(options: any): Promise<void>;
 }
