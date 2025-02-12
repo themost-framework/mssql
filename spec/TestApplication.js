@@ -12,6 +12,11 @@ const testConnectionOptions = {
     'user': process.env.DB_USER,
     'database': 'test_db',
     'timezone': 'Europe/Athens',
+     'pool': {
+        'max': 10,
+        'min': 0,
+        'idleTimeoutMillis': 30000
+      },
     'options': {
         'encrypt': false,
         'trustServerCertificate': true,
@@ -96,6 +101,10 @@ class TestApplication extends DataApplication {
         const service = this.getConfiguration().getStrategy(DataCacheStrategy);
         if (typeof service.finalize === 'function') {
             await service.finalize();
+        }
+        const context = this.createContext();
+        if (typeof context.db.finalizeConnectionPoolAsync === 'function') {
+            await context.db.finalizeConnectionPoolAsync();
         }
     }
 

@@ -1,4 +1,12 @@
 import { DataAdapterBase, DataAdapterBaseHelper, DataAdapterDatabase, DataAdapterIndexes, DataAdapterMigration, DataAdapterTable, DataAdapterView } from '@themost/common';
+import { Pool } from 'generic-pool'
+export declare class MSSqlConnectionPoolManager {
+    pools: Map<string, Pool<any>>;
+    get(options: any, callback: (err?: Error, connection?: Pool<any>) => void): void;
+    getAsync(options: any): Promise<Pool<any>>;
+    finalize(callback: (err?: Error) => void): void;
+    finalizeAsync(options: any): Promise<void>;
+}
 
 export declare class MSSqlAdapter implements DataAdapterBase, DataAdapterBaseHelper {
     static formatType(field: any): string;
@@ -25,4 +33,7 @@ export declare class MSSqlAdapter implements DataAdapterBase, DataAdapterBaseHel
     view(name: string): DataAdapterView;
     indexes(name: string): DataAdapterIndexes;
     database(name: string): DataAdapterDatabase;
+    getConnectionPool(): Pool<any>;
+    finalizeConnectionPool(callback: (err?: Error) => void): void;
+    finalizeConnectionPoolAsync(options: any): Promise<void>;
 }
