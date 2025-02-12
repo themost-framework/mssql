@@ -128,7 +128,7 @@ class MSSqlFormatter extends SqlFormatter {
         return sprintf('PATINDEX(%s,%s) >= 1', this.escape(s1), this.escape(p0));
     }
     $date(p0) {
-        return sprintf('CONVERT(date, %s)', this.escape(p0));
+        return sprintf(' TODATETIMEOFFSET (%s,datepart(TZ,SYSDATETIMEOFFSET()))', this.escape(p0));
     }
     /**
      * Escapes an object or a value and returns the equivalent sql value.
