@@ -128,7 +128,7 @@ class MSSqlFormatter extends SqlFormatter {
         return sprintf('PATINDEX(%s,%s) >= 1', this.escape(s1), this.escape(p0));
     }
     $date(p0) {
-        return sprintf('CONVERT(date, %s)', this.escape(p0));
+        return this.$toDate(p0, 'date');
     }
     /**
      * Escapes an object or a value and returns the equivalent sql value.
@@ -307,7 +307,7 @@ class MSSqlFormatter extends SqlFormatter {
      * @param {*} expr
      * @return {string}
      */
-    $jsonArray(expr) {
+    $jsonEach(expr) {
         if (typeof expr.$name !== 'string') {
             throw new Error('Invalid json expression. Expected a string');
         }
@@ -401,6 +401,87 @@ class MSSqlFormatter extends SqlFormatter {
             return previous;
         }, []);
         return `json_object(${pairs.join(',')})`;
+    }
+
+     /**
+     * @param {{ $jsonGet: Array<*> }} expr
+     */
+     $jsonGroupArray(expr) {
+        const [key] = Object.keys(expr);
+        if (key !== '$jsonObject') {
+            throw new Error('Invalid json group array expression. Expected a json object expression');
+        }
+        return `JSON_ARRAYAGG(${this.escape(expr)})`;
+    }
+
+    /**
+     * @param {import('@themost/query').QueryExpression} expr
+     */
+    $jsonArray(expr) {
+        if (expr == null) {
+            throw new Error('The given query expression cannot be null');
+        }
+        if (expr instanceof QueryField) {
+            // escape expr as field and waiting for parsing results as json array
+            return this.escape(expr);
+        }
+        // trear expr as select expression
+        if (expr.$select) {
+            // get select fields
+            const args = Object.keys(expr.$select).reduce((previous, key) => {
+                previous.push.apply(previous, expr.$select[key]);
+                return previous;
+            }, []);
+            const [key] = Object.keys(expr.$select);
+            // prepare select expression to return json array   
+            expr.$select[key] = [
+                {
+                    $jsonGroupArray: [ // use json_group_array function
+                        {
+                            $jsonObject: args // use json_object function
+                        }
+                    ]
+                }
+            ];
+            return `(${this.format(expr)})`;
+        }
+        // treat expression as query field
+        if (Object.prototype.hasOwnProperty.call(expr, '$name')) {
+            return this.escape(expr);
+        }
+        // treat expression as value
+        if (Object.prototype.hasOwnProperty.call(expr, '$value')) {
+            if (Array.isArray(expr.$value)) {
+                return this.escape(JSON.stringify(expr.$value));
+            }
+            return this.escape(expr);
+        }
+        if (Object.prototype.hasOwnProperty.call(expr, '$literal')) {
+            if (Array.isArray(expr.$literal)) {
+                return this.escape(JSON.stringify(expr.$literal));
+            }
+            return this.escape(expr);
+        }
+        throw new Error('Invalid json array expression. Expected a valid select expression');
+    }
+
+    /**
+     * Converts the give expression to a date, datetime or timestamp value
+     * @param {*} arg
+     * @param {('date'|'datetime'|'timestamp')} type 
+     * @returns 
+     */
+    $toDate(arg, type) {
+        switch (type) {
+            case 'date':
+                return sprintf('CAST(%s AS DATE)', this.escape(arg));
+            case 'datetime':
+                return sprintf('CAST(%s AS DATETIME)', this.escape(arg));
+            case 'timestamp':
+                return sprintf('TODATETIMEOFFSET(%s,datepart(TZ,SYSDATETIMEOFFSET()))', this.escape(arg));
+            default:
+                return sprintf('CAST(%s AS DATETIMEOFFSET)', this.escape(arg));
+        }
     }
 
 }

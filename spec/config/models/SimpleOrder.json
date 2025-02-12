@@ -172,6 +172,13 @@
             "type": "Integer",
             "calculation": "javascript:return this.user();",
             "readonly": true
+        },
+        {
+            "name": "additionalPaymentMethods",
+            "type": "Json",
+            "additionalType": "PaymentMethod",
+            "expandable": true,
+            "many": true
         }
     ],
     "views": [

@@ -1,6 +1,5 @@
 // MOST Web Framework Codename Zero Gravity Copyright (c) 2017-2022, THEMOST LP All rights reserved
-import mssql from 'mssql';
-import {ConnectionPool} from 'mssql';
+import {ConnectionPool, Request, Transaction} from 'mssql';
 import async from 'async';
 import { sprintf } from 'sprintf-js';
 import { TraceUtils } from '@themost/common';
@@ -8,6 +7,8 @@ import { SqlUtils } from '@themost/query';
 import { MSSqlFormatter } from './MSSqlFormatter';
 import { TransactionIsolationLevelFormatter } from './TransactionIsolationLevel';
 import { AsyncSeriesEventEmitter, before, after } from '@themost/events';
+import { Guid } from '@themost/common'
+
 
 /**
  *
@@ -47,9 +48,101 @@ function onReceivingJsonObject(event) {
 }
 
 /**
+ * @type {Map<string, ConnectionPool>}
+ */
+const pools = new Map();
+
+class MSSqlConnectionPoolManager {
+
+    /**
+     * @type {Map<string, ConnectionPool>}
+     */
+    get pools() {
+        return pools;
+    }
+
+    /**
+     * Gets a connection pool for the given connection options
+     * @param {*} connectionOptions 
+     * @returns Promise<ConnectionPool>
+     */
+    async getAsync(connectionOptions) {
+        return new Promise((resolve, reject) => {
+                return this.get(connectionOptions, (err, pool) => {
+                    if (err) {
+                        return reject(err);
+                    }
+                    return resolve(pool);
+            });
+        });
+    }
+
+    /**
+     * 
+     * @param {*} connectOptions 
+     * @param {function(err: Error=, pool: ConnectionPool)} callback 
+     * @returns 
+     */
+    get(connectOptions, callback) {
+        if (connectOptions.id == null) {
+            return callback(new Error('Invalid connection options. The configuration is missing a unique identifier'));
+        }
+        const key = connectOptions.id;
+        if (pools.has(key)) {
+            return callback(null, pools.get(key));
+        }
+        const pool = new ConnectionPool(connectOptions);
+        const close = pool.close.bind(pool);
+        pool.close = (...args) => {
+            pools.delete(key);
+            return close(...args);
+        }
+        pool.connect((err) => {
+            if (err) {
+                return callback(err);
+            }
+            pools.set(key, pool);
+            return callback(null, pool);
+        });
+    }
+
+    /**
+     * Finalizes all connection pools
+     * @param {function(err: Error=)} callback 
+     */
+    finalize(callback) {
+        async.each(pools.values(), (pool, cb) => {
+            pool.close(cb);
+        }, (err) => {
+            pools.clear();
+            if (typeof callback === 'function') {
+                return callback(err);
+            }
+        });
+    }
+
+    /**
+     * Finalizes all connection pools
+     * @returns Promise<void>
+     */
+    async finalizeAsync() {
+        return new Promise((resolve, reject) => {
+            this.finalize((err) => {
+                if (err) {
+                    return reject(err);
+                }
+                return resolve();
+            });
+        });
+    }
+
+}
+
+/**
  * @class
  */
 class MSSqlAdapter {
+
     /**
      * @constructor
      * @param {*} options
@@ -83,6 +176,7 @@ class MSSqlAdapter {
                 }).join(';');
             }, configurable: false, enumerable: false
         });
+        this.id = Guid.from(this.connectionString).toString();
         this.executing = new AsyncSeriesEventEmitter();
         this.executed = new AsyncSeriesEventEmitter();
         this.executed.subscribe(onReceivingJsonObject);
@@ -101,14 +195,15 @@ class MSSqlAdapter {
         }
         // clone connection options
         const connectionOptions = Object.assign({
+            id: this.id,
             options: {
                 encrypt: false,
                 trustServerCertificate: true
             }
         }, self.options);
         // create connection
-        let callbackAlreadyCalled = false;
-        const connection = new ConnectionPool(connectionOptions);
+        //let callbackAlreadyCalled = false;
+        const connectionManager = new MSSqlConnectionPoolManager();
         let transactionIsolationLevel = null;
         if (connectionOptions && connectionOptions.options) {
             if (Object.prototype.hasOwnProperty.call(connectionOptions.options, 'transactionIsolationLevel')) {
@@ -116,14 +211,14 @@ class MSSqlAdapter {
                 transactionIsolationLevel = new TransactionIsolationLevelFormatter().format(level);
             }
         }
-        connection.on('error', function(err) {
-            TraceUtils.error(err);
-            if (callbackAlreadyCalled === false) {
-             return callback(err);
-            } 
-         });
-        connection.connect(function(err) {
-            callbackAlreadyCalled = true;
+        // connection.on('error', function(err) {
+        //     TraceUtils.error(err);
+        //     if (callbackAlreadyCalled === false) {
+        //      return callback(err);
+        //     } 
+        //  });
+         connectionManager.get(connectionOptions, function(err, connection) {
+            //callbackAlreadyCalled = true;
             if (err) {
                 // destroy connection
                 self.rawConnection = null;
@@ -163,24 +258,8 @@ class MSSqlAdapter {
      */
     close(callback) {
         const self = this;
-        if (self.rawConnection == null) {
-            if (typeof callback == 'function') {
-                return callback();
-            }
-            return;
-        }
-        self.rawConnection.close(function (err) {
-            if (err) {
-                TraceUtils.error('An error occurred while closing database connection');
-                TraceUtils.error(err);
-            }
-            //do nothing
-            self.rawConnection = null;
-            // invoke callback
-            if (typeof callback == 'function') {
-                return callback();
-            }
-        });
+        self.rawConnection = null;
+        return callback();
     }
     /**
      * Closes the current database connection
@@ -221,7 +300,7 @@ class MSSqlAdapter {
             }
             else {
                 //create transaction
-                self.transaction = new mssql.Transaction(self.rawConnection);
+                self.transaction = new Transaction(self.rawConnection);
                 //begin transaction
                 self.transaction.begin(function (err) {
                     //error check (?)
@@ -444,7 +523,7 @@ class MSSqlAdapter {
                         startTime = new Date().getTime();
                     }
                     // execute raw command
-                    const request = self.transaction ? new mssql.Request(self.transaction) : new mssql.Request(self.rawConnection);
+                    const request = self.transaction ? new Request(self.transaction) : new Request(self.rawConnection);
                     let preparedSql = self.prepare(sql, values);
                     if (typeof query.$insert !== 'undefined')
                         preparedSql += ';SELECT SCOPE_IDENTITY() as insertId';
@@ -1406,8 +1485,27 @@ class MSSqlAdapter {
         };
     }
 
+    /**
+     * @returns {import('generic-pool').Pool}
+     */
+    getConnectionPool() {
+        const manager = new MSSqlConnectionPoolManager();
+        return manager.pools.get(this.id);
+    }
+
+    finalizeConnectionPool(callback) {
+        new MSSqlConnectionPoolManager().finalize((err) => {
+            return callback(err);
+        });
+    }
+
+    finalizeConnectionPoolAsync() {
+        return new MSSqlConnectionPoolManager().finalizeAsync();
+    }
+
 }
 
 export {
+    MSSqlConnectionPoolManager,
     MSSqlAdapter
 };
