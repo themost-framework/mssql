@@ -480,7 +480,7 @@ class MSSqlFormatter extends SqlFormatter {
             case 'timestamp':
                 return sprintf('TODATETIMEOFFSET(%s,datepart(TZ,SYSDATETIMEOFFSET()))', this.escape(arg));
             default:
-                return sprintf('TODATETIMEOFFSET(%s,datepart(TZ,SYSDATETIMEOFFSET()))', this.escape(arg));
+                return sprintf('CAST(%s AS DATETIMEOFFSET)', this.escape(arg));
         }
     }
 
