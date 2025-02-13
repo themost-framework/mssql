@@ -7,7 +7,8 @@ import { SqlUtils } from '@themost/query';
 import { MSSqlFormatter } from './MSSqlFormatter';
 import { TransactionIsolationLevelFormatter } from './TransactionIsolationLevel';
 import { AsyncSeriesEventEmitter, before, after } from '@themost/events';
-import { Guid } from '@themost/common'
+import { Guid } from '@themost/common';
+import assign from 'lodash/assign';
 
 
 /**
@@ -194,7 +195,7 @@ class MSSqlAdapter {
             return callback();
         }
         // clone connection options
-        const connectionOptions = Object.assign({
+        const connectionOptions = assign({
             id: this.id,
             options: {
                 encrypt: false,
@@ -211,12 +212,6 @@ class MSSqlAdapter {
                 transactionIsolationLevel = new TransactionIsolationLevelFormatter().format(level);
             }
         }
-        // connection.on('error', function(err) {
-        //     TraceUtils.error(err);
-        //     if (callbackAlreadyCalled === false) {
-        //      return callback(err);
-        //     } 
-        //  });
          connectionManager.get(connectionOptions, function(err, connection) {
             //callbackAlreadyCalled = true;
             if (err) {

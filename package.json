@@ -35,6 +35,7 @@
     "@themost/json": "^1.1.0",
     "async": "^3.2.3",
     "crypto-js": "^4.2.0",
+    "lodash": "^4.17.21",
     "mssql": "^9.3.2",
     "sprintf-js": "^1.1.2"
   },
