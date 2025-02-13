@@ -7,6 +7,7 @@ import {TestApplication} from './TestApplication';
 import { TraceUtils } from '@themost/common';
 import { DataPermissionEventListener } from '@themost/data';
 import { promisify } from 'util';
+import { JSONArray } from '@themost/json';
 const beforeExecuteAsync = promisify(DataPermissionEventListener.prototype.beforeExecute);
 
 /**
@@ -88,7 +89,7 @@ async function createSimpleOrders(db) {
             delete customer.address?.id;
         }
         // get 2 random payment methods
-        const additionalPaymentMethods = getRandomItems(paymentMethods, 2);
+        const additionalPaymentMethods = new JSONArray(getRandomItems(paymentMethods, 2));
         return {
             orderDate,
             discount,
@@ -613,6 +614,100 @@ describe('SqlFormatter', () => {
             expect(typeof item.customer).toEqual('object');
             expect(typeof item.orderedItem).toEqual('object');
         }
+    });
+
+    it('should return json arrays', async () => {
+        // set context user
+        context.user = {
+            name: 'alexis.rees@example.com'
+          };
+        
+        const queryPeople = context.model('Person').asQueryable().select(
+            'id', 'familyName', 'givenName', 'jobTitle', 'email'
+        ).flatten();
+        await beforeExecuteAsync({
+            model: queryPeople.model,
+            emitter: queryPeople,
+            query: queryPeople.query,
+        });
+        const { viewAdapter: People  } = queryPeople.model;
+        const queryOrders = context.model('Order').asQueryable().select(
+            'id', 'orderDate', 'orderStatus', 'orderedItem', 'customer'
+        ).flatten();
+        const { viewAdapter: Orders  } = queryOrders.model;
+        // prepare query for each customer
+        queryOrders.query.where(
+            new QueryField('customer').from(Orders)
+        ).equal(
+            new QueryField('id').from(People)
+        );
+        const selectPeople = queryPeople.query.$select[People];
+        // add orders as json array
+        selectPeople.push({
+            orders: {
+                $jsonArray: [
+                    queryOrders.query
+                ]
+            }
+        });
+        const start= new Date().getTime();
+        const items = await queryPeople.take(50).getItems();
+        const end = new Date().getTime();
+        TraceUtils.log('Elapsed time: ' + (end-start) + 'ms');
+        expect(items.length).toBeTruthy();
+        for (const item of items) {
+            expect(Array.isArray(item.orders)).toBeTruthy();
+            for (const order of item.orders) {
+                expect(order.customer).toEqual(item.id);
+            }
+
+        }
+    });
+
+    it('should parse string as json array', async () => {
+        // set context user
+        context.user = {
+            name: 'alexis.rees@example.com'
+          };
+        const { viewAdapter: People  } = context.model('Person');
+        const query = new QueryExpression().select(
+            'id', 'familyName', 'givenName', 'jobTitle', 'email',
+            new QueryField({
+                tags: {
+                    $jsonArray: [
+                        new QueryField({
+                            $value: '[ "user", "customer", "admin" ]'
+                        })
+                    ]
+                }
+            })
+        ).from(People).where('email').equal(context.user.name);
+        const [item] = await context.db.executeAsync(query);
+        expect(item).toBeTruthy();
+    });
+
+    it('should parse array as json array', async () => {
+        // set context user
+        context.user = {
+            name: 'alexis.rees@example.com'
+          };
+        const { viewAdapter: People  } = context.model('Person');
+        const query = new QueryExpression().select(
+            'id', 'familyName', 'givenName', 'jobTitle', 'email',
+            new QueryField({
+                tags: {
+                    $jsonArray: [
+                        {
+                            $value: [ 'user', 'customer', 'admin' ]
+                        }
+                    ]
+                }
+            })
+        ).from(People).where('email').equal(context.user.name);
+        const [item] = await context.db.executeAsync(query);
+        expect(item).toBeTruthy();
+        expect(Array.isArray(item.tags)).toBeTruthy();
+        expect(item.tags).toEqual([ 'user', 'customer', 'admin' ]);
     });
 
 });

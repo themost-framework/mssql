@@ -427,23 +427,7 @@ class MSSqlFormatter extends SqlFormatter {
         }
         // trear expr as select expression
         if (expr.$select) {
-            // get select fields
-            const args = Object.keys(expr.$select).reduce((previous, key) => {
-                previous.push.apply(previous, expr.$select[key]);
-                return previous;
-            }, []);
-            const [key] = Object.keys(expr.$select);
-            // prepare select expression to return json array   
-            expr.$select[key] = [
-                {
-                    $jsonGroupArray: [ // use json_group_array function
-                        {
-                            $jsonObject: args // use json_object function
-                        }
-                    ]
-                }
-            ];
-            return `(${this.format(expr)})`;
+            return `(${this.format(expr)} FOR JSON PATH)`;
         }
         // treat expression as query field
         if (Object.prototype.hasOwnProperty.call(expr, '$name')) {

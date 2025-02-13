@@ -28,7 +28,7 @@ function onReceivingJsonObject(event) {
                 if (typeof key !== 'string') {
                     return false;
                 }
-                return x[key].$jsonObject != null || x[key].$json != null;
+                return x[key].$jsonObject != null || x[key].$jsonArray != null  || x[key].$jsonGroupArray != null;
             }).map((x) => {
                 return Object.keys(x)[0];
             });
