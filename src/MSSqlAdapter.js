@@ -299,6 +299,10 @@ class MSSqlAdapter {
                 //begin transaction
                 self.transaction.begin(function (err) {
                     //error check (?)
+                    let rolledBack = false;
+                    self.transaction.on('rollback', aborted => {
+                        rolledBack = true;
+                    });
                     if (err) {
                         TraceUtils.error(err);
                         return callback(err);
@@ -309,6 +313,9 @@ class MSSqlAdapter {
                                 try {
                                     if (err) {
                                         if (self.transaction) {
+                                            if (rolledBack) {
+                                                return callback(err);
+                                            }
                                             return self.transaction.rollback(function(rollbackErr) {
                                                 self.transaction = null;
                                                 if (rollbackErr) {
