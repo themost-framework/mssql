@@ -8,7 +8,7 @@ import { MSSqlFormatter } from './MSSqlFormatter';
 import { TransactionIsolationLevelFormatter } from './TransactionIsolationLevel';
 import { AsyncSeriesEventEmitter, before, after } from '@themost/events';
 import { Guid } from '@themost/common';
-import assign from 'lodash/assign';
+import merge from 'lodash/merge';
 
 
 /**
@@ -195,7 +195,7 @@ class MSSqlAdapter {
             return callback();
         }
         // clone connection options
-        const connectionOptions = assign({
+        const connectionOptions = merge({
             id: this.id,
             options: {
                 encrypt: false,
