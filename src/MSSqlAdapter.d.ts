@@ -13,6 +13,7 @@ export declare class MSSqlAdapter implements DataAdapterBase, DataAdapterBaseHel
     constructor(options?: any);
     rawConnection?: any;
     options?: any;
+    disposed?: boolean;
     selectIdentityAsync(entity: string, attribute: string): Promise<any>;
     executeInTransactionAsync(func: () => Promise<void>): Promise<void>;
     migrateAsync(obj: DataAdapterMigration): Promise<any>;
