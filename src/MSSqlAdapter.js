@@ -10,7 +10,6 @@ import { AsyncSeriesEventEmitter, before, after } from '@themost/events';
 import { Guid } from '@themost/common';
 import merge from 'lodash/merge';
 
-
 /**
  *
  * @param {{target: SqliteAdapter, query: string|QueryExpression, results: Array<*>}} event
@@ -45,6 +44,13 @@ function onReceivingJsonObject(event) {
                 }
             }
         }
+    }
+}
+
+class ConnectionStateError extends Error {
+    constructor() {
+        super('The connection has an invalid state. It seems that the current operation was cancelled by the user or the socket has been closed.');
+        this.name = 'ConnectionStateError';
     }
 }
 
@@ -165,6 +171,13 @@ class MSSqlAdapter {
          */
         this.connectionPooling = false;
         const self = this;
+
+        // get retry options
+        if (typeof this.options.retry === 'undefined') {
+            this.options.retry = 4;
+            this.options.retryInterval = 1000;
+        }
+
         /**
          * Gets connection string from options.
          * @type {string}
@@ -181,6 +194,9 @@ class MSSqlAdapter {
         this.executing = new AsyncSeriesEventEmitter();
         this.executed = new AsyncSeriesEventEmitter();
         this.executed.subscribe(onReceivingJsonObject);
+        this.committed = new AsyncSeriesEventEmitter();
+        this.rollbacked = new AsyncSeriesEventEmitter();
+
     }
     prepare(query, values) {
         return SqlUtils.format(query, values);
@@ -194,6 +210,13 @@ class MSSqlAdapter {
         if (self.rawConnection) {
             return callback();
         }
+        // important note: validate the connection state against transaction state
+        // if the connection is closed and a transaction is still active then throw error
+        if (self.disposed === true) {
+            TraceUtils.debug('The connection has been already closed.');
+            return callback(new ConnectionStateError());
+        }
+        TraceUtils.debug('Opening database connection');
         // clone connection options
         const connectionOptions = merge({
             id: this.id,
@@ -253,7 +276,40 @@ class MSSqlAdapter {
      */
     close(callback) {
         const self = this;
+        if (self.rawConnection != null) {
+            TraceUtils.debug('Closing database connection');
+        }
         self.rawConnection = null;
+        // auto-rollback transaction
+        /**
+         * @type {Transaction}
+         */
+        const transaction = self.transaction;
+        if (transaction != null) {
+            TraceUtils.warn('A connection is being closed while a transaction is still active. The transaction will be rolled back.');
+            // if transaction has an active request, transaction rollback is disabled
+            if (transaction._activeRequest) {
+                // exit callback
+                return callback();
+            }
+            TraceUtils.debug('MSSqlAdapter.close()', 'Rolling back transaction');
+            // otherwise, rollback transaction
+            try {
+                return transaction.rollback(function(err) {                
+                    if (err) {
+                        TraceUtils.error('An error occurred while rolling back the transaction.');
+                        TraceUtils.error(err);
+                    }
+                    return callback();
+                });
+            } catch (err) {
+                return callback(err);
+            } finally {
+                self.transaction = null;
+                TraceUtils.debug('MSSqlAdapter.close()', 'Transaction has been destroyed');
+            }
+        }
+        // close connection and return
         return callback();
     }
     /**
@@ -280,6 +336,25 @@ class MSSqlAdapter {
         callback = callback || function () {
         };
         //ensure that database connection is open
+        if (self.disposed === true) {
+            if (self.transaction) {
+                try {
+                    return self.transaction.rollback(function(rollbackErr) {
+                        if (rollbackErr) {
+                            return callback(rollbackErr);
+                        }
+                        TraceUtils.debug('Transaction has been rolled back');
+                        return callback(new ConnectionStateError());
+                    });
+                } catch(err) {
+                    return callback(err);
+                } finally {
+                    self.transaction = null;
+                    TraceUtils.debug('MSSqlAdapter.executeInTransaction()', 'Transaction has been destroyed');
+                }
+            }
+            return callback(new ConnectionStateError());
+        }
         self.open(function (err) {
             if (err) {
                 callback.call(self, err);
@@ -297,12 +372,16 @@ class MSSqlAdapter {
                 //create transaction
                 self.transaction = new Transaction(self.rawConnection);
                 //begin transaction
+                TraceUtils.debug('MSSqlAdapter.executeInTransaction()', 'Beginning transaction');
                 self.transaction.begin(function (err) {
                     //error check (?)
                     let rolledBack = false;
-                    self.transaction.on('rollback', aborted => {
-                        rolledBack = true;
-                    });
+                    if (self.transaction) {
+                        self.transaction.on('rollback', (aborted) => {
+                            TraceUtils.debug('transaction.on("rollback")', 'Transaction has been rolled back');
+                            rolledBack = true;
+                        });
+                    }
                     if (err) {
                         TraceUtils.error(err);
                         return callback(err);
@@ -314,15 +393,24 @@ class MSSqlAdapter {
                                     if (err) {
                                         if (self.transaction) {
                                             if (rolledBack) {
+                                                TraceUtils.warn('The transaction has been already rolled back. The operation will exit with error.');
                                                 return callback(err);
                                             }
-                                            return self.transaction.rollback(function(rollbackErr) {
-                                                self.transaction = null;
-                                                if (rollbackErr) {
-                                                    return callback(rollbackErr);
-                                                }
+                                            TraceUtils.debug('MSSqlAdapter.executeInTransaction()', 'Rolling back transaction');
+                                            try {
+                                                return self.transaction.rollback(function(rollbackErr) {
+                                                    if (rollbackErr) {
+                                                        return callback(rollbackErr);
+                                                    }
+                                                    TraceUtils.debug('MSSqlAdapter.executeInTransaction()', 'Transaction has been rolled back');
+                                                    return callback(err);
+                                                });
+                                            } catch (err) {
                                                 return callback(err);
-                                            });
+                                            } finally {
+                                                self.transaction = null;
+                                                TraceUtils.debug('MSSqlAdapter.executeInTransaction()', 'Transaction has been destroyed');
+                                            }
                                         }
                                         return callback(err);
                                     }
@@ -330,18 +418,34 @@ class MSSqlAdapter {
                                         if (typeof self.transaction === 'undefined' || self.transaction === null) {
                                             return callback(new Error('Database transaction cannot be empty on commit.'));
                                         }
-                                        self.transaction.commit(function (err) {
+                                        TraceUtils.debug('MSSqlAdapter.executeInTransaction()', 'Committing transaction');
+                                        return self.transaction.commit(function (err) {
                                             if (err) {
-                                                return self.transaction.rollback(function(rollbackErr) {
-                                                    self.transaction = null;
-                                                    if (rollbackErr) {
-                                                        return callback(rollbackErr);
-                                                    }
+                                                TraceUtils.debug('An error occurred while committing the transaction');
+                                                try {
+                                                    return self.transaction.rollback(function(rollbackErr) {
+                                                        if (rollbackErr) {
+                                                            return callback(rollbackErr);
+                                                        }
+                                                        TraceUtils.debug('MSSqlAdapter.executeInTransaction()', 'Transaction has been rolled back');
+                                                        return callback(err);
+                                                    });
+                                                } catch (err) {
                                                     return callback(err);
-                                                });
+                                                } finally {
+                                                    self.transaction = null;
+                                                    TraceUtils.debug('MSSqlAdapter.executeInTransaction()', 'Transaction has been destroyed');
+                                                }
                                             }
                                             self.transaction = null;
-                                            return callback(err);
+                                            return self.committed.emit({
+                                                target: self
+                                            }).then(() => {
+                                                return callback();
+                                            }).catch((err) => {
+                                                return callback(err);
+                                            });
+                                            
                                         });
                                     }
                                 }
@@ -355,9 +459,7 @@ class MSSqlAdapter {
                         }
                     }
                 });
-                /* self.transaction.on('begin', function() {
-                     TraceUtils.log('begin transaction');
-                 });*/
+                
             }
         });
     }
@@ -443,7 +545,17 @@ class MSSqlAdapter {
                     return callback(null, result[0].value);
                 });
             });
+        }, (error) => {
+            if (inTransaction === false) {
+                return callback(error);
+            }
+            // close dedicated connection
+            return db.close(() => {
+                // and return error
+                return callback(error);
+            });
         });
+
     }
 
     /**
@@ -513,6 +625,9 @@ class MSSqlAdapter {
                 callback.call(self, new Error('The executing command is of the wrong type or empty.'));
                 return;
             }
+            if (self.disposed === true) {
+                return callback(new ConnectionStateError());
+            }
             //ensure connection
             self.open(function (err) {
                 if (err) {
@@ -531,6 +646,40 @@ class MSSqlAdapter {
                         preparedSql += ';SELECT SCOPE_IDENTITY() as insertId';
                     request.query(preparedSql, function (err, result) {
                         if (err) {
+                            if (err.code === 'ESOCKET' || err.code === 'ETIMEOUT') { // connection is closed or timeout
+                                const shouldRetry = typeof self.options.retry === 'number' && self.options.retry > 0;
+                                if (shouldRetry) {
+                                    const retry = self.options.retry;
+                                    let retryInterval = 1000;
+                                    if (typeof self.options.retryInterval === 'number' && self.options.retryInterval > 0) {
+                                        retryInterval = self.options.retryInterval;
+                                    }
+                                    // validate retry option
+                                    if (Object.prototype.hasOwnProperty.call(query, 'retry') === false) {
+                                        Object.defineProperty(query, 'retry', {
+                                            configurable: true,
+                                            enumerable: false,
+                                            value: 0,
+                                            writable: true
+                                        });
+                                    }
+                                    if (typeof query.retry === 'number' && query.retry >= (retry * retryInterval)) {
+                                        // the retries have been exhausted
+                                        delete query.retry;
+                                        // trace error
+                                        TraceUtils.error(`SQL (Execution Error):${err.message}, ${preparedSql}`);
+                                        // return callback with error
+                                        return callback(err);
+                                    }
+                                    // retry
+                                    query.retry += retryInterval;
+                                    TraceUtils.warn(`'SQL Error:${preparedSql}. Retrying in ${query.retry} ms.'`);
+                                    return setTimeout(function () {
+                                        return self.execute(query, values, callback);
+                                    }, query.retry);
+                                }
+                            }
+                            // otherwise, return callback with error
                             TraceUtils.error(`SQL (Execution Error):${err.message}, ${preparedSql}`);
                             return callback(err);
                         }
