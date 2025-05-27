@@ -144,7 +144,7 @@ class MSSqlFormatter extends SqlFormatter {
         }
         if (typeof value === 'string') {
             const str = value.replace(/'/g, '\'\'');
-            return unquoted ? str : ('\'' + str + '\'');
+            return unquoted ? str : ('N\'' + str + '\'');
         }
         return super.escape.bind(this)(value, unquoted);
     }
