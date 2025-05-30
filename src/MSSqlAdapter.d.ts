@@ -8,6 +8,16 @@ export declare class MSSqlConnectionPoolManager {
     finalizeAsync(options: any): Promise<void>;
 }
 
+export declare interface DataAdapterTables {
+    list(callback: (err: Error, result: { name: string, schema?: string }[]) => void): void;
+    listAsync(): Promise<{ name: string }[]>;
+}
+
+export declare interface DataAdapterViews {
+    list(callback: (err: Error, result: { name: string, schema?: string }[]) => void): void;
+    listAsync(): Promise<{ name: string }[]>;
+}
+
 export declare class MSSqlAdapter implements DataAdapterBase, DataAdapterBaseHelper {
     static formatType(field: any): string;
     constructor(options?: any);
@@ -32,6 +42,8 @@ export declare class MSSqlAdapter implements DataAdapterBase, DataAdapterBaseHel
     executeAsync<T>(query: any, values: any): Promise<Array<T>>;
     table(name: string): DataAdapterTable;
     view(name: string): DataAdapterView;
+    tables(): DataAdapterTables;
+    views(): DataAdapterViews;
     indexes(name: string): DataAdapterIndexes;
     database(name: string): DataAdapterDatabase;
     getConnectionPool(): ConnectionPool;

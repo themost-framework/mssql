@@ -42,7 +42,7 @@ describe('MSSqlFormatter', () => {
     it('should escape constant', async () => {
         const formatter = new MSSqlFormatter();
         expect(formatter.escapeConstant(10.45)).toEqual('10.45');
-        expect(formatter.escapeConstant('test')).toEqual('\'test\'');
+        expect(formatter.escapeConstant('test')).toEqual('N\'test\'');
         expect(formatter.escapeConstant(true)).toEqual('1');
     });
 
