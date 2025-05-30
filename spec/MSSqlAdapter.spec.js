@@ -36,6 +36,26 @@ describe('MSSqlAdapter', () => {
         });
     });
 
+    it('should get tables', async () => {
+        await app.executeInTestTranscaction(async (context) => {
+            const tables = await context.db.tables().listAsync();
+            expect(Array.isArray(tables)).toBeTruthy();
+            expect(tables.length).toBeGreaterThan(0);
+            const table1 = tables.find((table) => table.name === 'UserBase');
+            expect(table1).toBeTruthy();
+        });
+    });
+
+    it('should get views', async () => {
+        await app.executeInTestTranscaction(async (context) => {
+            const views = await context.db.views().listAsync();
+            expect(Array.isArray(views)).toBeTruthy();
+            expect(views.length).toBeGreaterThan(0);
+            const view1 = views.find((table) => table.name === 'UserData');
+            expect(view1).toBeTruthy();
+        });
+    });
+
     it('should create table', async () => {
         await app.executeInTestTranscaction(async (context) => {
             const db = context.db;

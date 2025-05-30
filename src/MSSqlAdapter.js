@@ -1185,6 +1185,70 @@ class MSSqlAdapter {
             }
         };
     }
+
+    /**
+     * 
+     * @returns {import('./MSSqlAdapter').DataAdapterTables}
+     */
+    tables() {
+        const self = this;
+        return {
+            /**
+             * @param {function} callback
+             * @returns void
+             */
+            list: function(callback) {
+                void self.execute('SELECT [name] as [name],SCHEMA_NAME([uid]) AS [schema] FROM sysobjects WHERE [type]=\'U\'', null, (err, results) => {
+                    if (err) {
+                        return callback(err);
+                    }
+                    return callback(null, results);
+                });
+            },
+            listAsync: function() {
+                return new Promise((resolve, reject) => {
+                    this.list((err, value) => {
+                        if (err) {
+                            return reject(err);
+                        }
+                        return resolve(value);
+                    });
+                });
+            }
+        }
+    }
+
+    /**
+     * 
+     * @returns {import('./MSSqlAdapter').DataAdapterViews}
+     */
+    views() {
+        const self = this;
+        return {
+            /**
+             * @param {function} callback
+             * @returns void
+             */
+            list: function(callback) {
+                void self.execute('SELECT [name] as [name],SCHEMA_NAME([uid]) AS [schema] FROM sysobjects WHERE [type]=\'V\'', null, (err, results) => {
+                    if (err) {
+                        return callback(err);
+                    }
+                    return callback(null, results);
+                });
+            },
+            listAsync: function() {
+                return new Promise((resolve, reject) => {
+                    this.list((err, value) => {
+                        if (err) {
+                            return reject(err);
+                        }
+                        return resolve(value);
+                    });
+                });
+            }
+        }
+    }
     /**
      *
      * @param  {DataModelMigration|*} obj - An Object that represents the data model scheme we want to migrate
