@@ -1,5 +1,5 @@
 import { DataAdapterBase, DataAdapterBaseHelper, DataAdapterDatabase, DataAdapterIndexes, DataAdapterMigration, DataAdapterTable, DataAdapterView } from '@themost/common';
-import { QueryExpression } from '@themost/query';
+import { QueryExpression, SqlFormatter } from '@themost/query';
 import { ConnectionPool } from 'mssql';
 
 export declare class MSSqlConnectionPoolManager {
@@ -57,4 +57,5 @@ export declare class MSSqlAdapter implements DataAdapterBase, DataAdapterBaseHel
     getConnectionPool(): ConnectionPool;
     finalizeConnectionPool(callback: (err?: Error) => void): void;
     finalizeConnectionPoolAsync(options: any): Promise<void>;
+    getFormatter(): SqlFormatter;
 }
