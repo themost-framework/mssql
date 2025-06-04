@@ -247,4 +247,49 @@ describe('MSSqlAdapter', () => {
             await db.executeAsync(`DROP TABLE ${new MSSqlFormatter().escapeName('Table1')}`);
         });
     });
+
+    it('should retry a wrong query string', async () => {
+        await app.executeInTestTranscaction(async (context) => {
+            const db = context.db;
+            let exists = await db.table('Table1').existsAsync();
+            expect(exists).toBeFalsy();
+            await db.table('Table1').createAsync([
+                {
+                    name: 'id',
+                    type: 'Counter',
+                    primary: true,
+                    nullable: false
+                },
+                {
+                    name: 'name',
+                    type: 'Text',
+                    size: 255,
+                    nullable: false
+                },
+                {
+                    name: 'description',
+                    type: 'Text',
+                    size: 255,
+                    nullable: true
+                }
+            ]);
+            exists = await db.table('Table1').existsAsync();
+            expect(exists).toBeTruthy();
+
+            try {
+                // this query is wrong because it does not contain a FROM clause
+                await db.executeAsync('SELECT *');
+            } catch (err) {
+                expect(err).toBeTruthy();
+            }
+
+            // retry the query with a FROM clause
+            const result = await db.executeAsync('SELECT * FROM Table1');
+            expect(result).toBeTruthy();
+            expect(result.length).toBe(0);
+
+            await db.executeAsync(`DROP TABLE ${new MSSqlFormatter().escapeName('Table1')}`);
+        });
+    });
+
 });

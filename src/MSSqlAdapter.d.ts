@@ -1,5 +1,7 @@
 import { DataAdapterBase, DataAdapterBaseHelper, DataAdapterDatabase, DataAdapterIndexes, DataAdapterMigration, DataAdapterTable, DataAdapterView } from '@themost/common';
+import { QueryExpression } from '@themost/query';
 import { ConnectionPool } from 'mssql';
+
 export declare class MSSqlConnectionPoolManager {
     pools: Map<string, ConnectionPool>;
     get(options: any, callback: (err?: Error, connection?: ConnectionPool) => void): void;
@@ -16,6 +18,12 @@ export declare interface DataAdapterTables {
 export declare interface DataAdapterViews {
     list(callback: (err: Error, result: { name: string, schema?: string }[]) => void): void;
     listAsync(): Promise<{ name: string }[]>;
+}
+
+declare class RetryQuery {
+    constructor(query: string | QueryExpression, retry?: number);
+    query: (string | QueryExpression);
+    retry?: number;
 }
 
 export declare class MSSqlAdapter implements DataAdapterBase, DataAdapterBaseHelper {
