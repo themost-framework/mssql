@@ -145,6 +145,26 @@ class MSSqlConnectionPoolManager {
 
 }
 
+class RetryQuery {
+    /**
+     * Creates a new instance of RetryQuery
+     * @param {string|import('@themost/query').QueryExpression} query 
+     * @param {number=} retry 
+     */
+    constructor(query, retry) {
+        /**
+         * Gets or sets the query to be retried
+         * @type {string|import('@themost/query').QueryExpression}
+         */
+        this.query = query;
+        /**
+         * Gets or sets the retry count
+         * @type {number}
+         */
+        this.retry = retry || 0;
+    }
+}
+
 /**
  * @class
  */
@@ -614,11 +634,14 @@ class MSSqlAdapter {
             if (typeof query === 'string') {
                 //get raw sql statement
                 sql = query;
-            }
-            else {
+            }  else {
                 //format query expression or any object that may act as query expression
                 const formatter = new MSSqlFormatter();
-                sql = formatter.format(query);
+                if (query instanceof RetryQuery) {
+                    sql = typeof query.query === 'string' ? query.query : formatter.format(query.query);
+                } else {
+                    sql = formatter.format(query);
+                }
             }
             //validate sql statement
             if (typeof sql !== 'string') {
@@ -654,29 +677,22 @@ class MSSqlAdapter {
                                     if (typeof self.options.retryInterval === 'number' && self.options.retryInterval > 0) {
                                         retryInterval = self.options.retryInterval;
                                     }
+                                    const retryQuery = (query instanceof RetryQuery === false) ? new RetryQuery(query) : query;
                                     // validate retry option
-                                    if (Object.prototype.hasOwnProperty.call(query, 'retry') === false) {
-                                        Object.defineProperty(query, 'retry', {
-                                            configurable: true,
-                                            enumerable: false,
-                                            value: 0,
-                                            writable: true
-                                        });
-                                    }
-                                    if (typeof query.retry === 'number' && query.retry >= (retry * retryInterval)) {
+                                    if (typeof retryQuery.retry === 'number' && retryQuery.retry >= (retry * retryInterval)) {
                                         // the retries have been exhausted
-                                        delete query.retry;
+                                        delete retryQuery.retry;
                                         // trace error
                                         TraceUtils.error(`SQL (Execution Error):${err.message}, ${preparedSql}`);
                                         // return callback with error
                                         return callback(err);
                                     }
                                     // retry
-                                    query.retry += retryInterval;
-                                    TraceUtils.warn(`'SQL Error:${preparedSql}. Retrying in ${query.retry} ms.'`);
+                                    retryQuery.retry += retryInterval;
+                                    TraceUtils.warn(`'SQL Error:${preparedSql}. Retrying in ${retryQuery.retry} ms.'`);
                                     return setTimeout(function () {
-                                        return self.execute(query, values, callback);
-                                    }, query.retry);
+                                        return self.execute(retryQuery, values, callback);
+                                    }, retryQuery.retry);
                                 }
                             }
                             // otherwise, return callback with error
