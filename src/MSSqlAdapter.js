@@ -3,7 +3,7 @@ import {ConnectionPool, Request, Transaction} from 'mssql';
 import async from 'async';
 import { sprintf } from 'sprintf-js';
 import { TraceUtils } from '@themost/common';
-import { SqlUtils } from '@themost/query';
+import { ObjectNameValidator, SqlUtils } from '@themost/query';
 import { MSSqlFormatter } from './MSSqlFormatter';
 import { TransactionIsolationLevelFormatter } from './TransactionIsolationLevel';
 import { AsyncSeriesEventEmitter, before, after } from '@themost/events';
@@ -519,18 +519,18 @@ class MSSqlAdapter {
          */
         const formatter = db.getFormatter();
         const nextValueSql = `SELECT NEXT VALUE FOR ${formatter.escapeName(sequenceName)} AS [value];`;
+        const entityAndSchema = entity.match(new RegExp(ObjectNameValidator.validator.pattern, 'g'));
+        let schema = 'dbo';
+        let table = entity;
+        if (entityAndSchema && entityAndSchema.length > 1) {
+            [schema, table] = entityAndSchema.slice(-2);
+        }
         // get max value for the given entity and attribute if sequence does not exist
         return db.executeAsync(`
 IF NOT EXISTS (SELECT * FROM [sysobjects] WHERE [name] = ${formatter.escape(sequenceName)} AND [type] = 'SO')
+    IF EXISTS(SELECT [c0].* FROM [syscolumns] AS [c0] INNER JOIN sysobjects s0 ON c0.[id]=s0.[id] AND [s0].[type]='U'
+        WHERE [c0].[name]=${formatter.escape(attribute)} AND [s0].name = ${formatter.escape(table)} AND SCHEMA_NAME(s0.[uid]) = ${formatter.escape(schema)})
     SELECT ISNULL(MAX(${formatter.escapeName(attribute)}), 0) AS [value] FROM ${formatter.escapeName(entity)};`, null).then((results) => {
-            // if sequence exists then get next value without trying to create sequence
-            // because it has been already created (in that case, results will be empty)
-            if (results && results.length === 0) {
-                return db.executeAsync(nextValueSql, null).then(([result]) => {
-                    // return result[0]
-                    return callback(null, parseInt(result.value, 10) + 1);
-                });
-            }
             const startValue = (results && results.length > 0) ? results[0].value : 1;
             // create sequence if it does not exist
                     return db.executeAsync(`
