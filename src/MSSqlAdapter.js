@@ -522,13 +522,13 @@ class MSSqlAdapter {
         // get max value for the given entity and attribute if sequence does not exist
         return db.executeAsync(`
 IF NOT EXISTS (SELECT * FROM [sysobjects] WHERE [name] = ${formatter.escape(sequenceName)} AND [type] = 'SO')
-    SELECT ISNULL(MAX(${formatter.escapeName(attribute)}), 1) AS [value] FROM ${formatter.escapeName(entity)};`, null).then((results) => {
+    SELECT ISNULL(MAX(${formatter.escapeName(attribute)}), 0) AS [value] FROM ${formatter.escapeName(entity)};`, null).then((results) => {
             // if sequence exists then get next value without trying to create sequence
             // because it has been already created (in that case, results will be empty)
             if (results && results.length === 0) {
                 return db.executeAsync(nextValueSql, null).then(([result]) => {
                     // return result[0]
-                    return callback(null, parseInt(result.value, 10));
+                    return callback(null, parseInt(result.value, 10) + 1);
                 });
             }
             const startValue = (results && results.length > 0) ? results[0].value : 1;
@@ -539,7 +539,7 @@ IF NOT EXISTS (SELECT * FROM [sysobjects] WHERE [name] = ${formatter.escape(sequ
                         // get next value for sequence
                         return db.executeAsync(nextValueSql, null).then(([result]) => {
                             // return result[0]
-                            return callback(null, parseInt(result.value, 10));
+                            return callback(null, parseInt(result.value, 10) + 1);
                         });
                     });
             }).catch((err) => {
