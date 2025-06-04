@@ -320,16 +320,22 @@ describe('MSSqlAdapter', () => {
             exists = await db.table('Table1').existsAsync();
             expect(exists).toBeTruthy();
 
+            await db.executeAsync(new QueryExpression().insert({
+                id: 1,
+                name: 'Test Name #1',
+                description: 'Test Description #1'
+            }).into('Table1'));
+
             // insert a row
             let id = await db.selectIdentityAsync('Table1', 'id');
-            expect(id).toBe(1);
+            expect(id).toBe(2);
             await db.executeAsync(new QueryExpression().insert({
                 id: id,
                 name: 'Test Name',
                 description: 'Test Description'
             }).into('Table1'));
             id = await db.selectIdentityAsync('Table1', 'id');
-            expect(id).toBe(2);
+            expect(id).toBe(3);
             await db.executeAsync(new QueryExpression().insert({
                 id: id,
                 name: 'New Test Name',
