@@ -292,4 +292,51 @@ describe('MSSqlAdapter', () => {
         });
     });
 
+    it('should select identity multiple times', async () => {
+        await app.executeInTestTranscaction(async (context) => {
+            const db = context.db;
+            let exists = await db.table('Table1').existsAsync();
+            expect(exists).toBeFalsy();
+            await db.table('Table1').createAsync([
+                {
+                    name: 'id',
+                    type: 'Integer',
+                    primary: true,
+                    nullable: false
+                },
+                {
+                    name: 'name',
+                    type: 'Text',
+                    size: 255,
+                    nullable: false
+                },
+                {
+                    name: 'description',
+                    type: 'Text',
+                    size: 255,
+                    nullable: true
+                }
+            ]);
+            exists = await db.table('Table1').existsAsync();
+            expect(exists).toBeTruthy();
+
+            // insert a row
+            let id = await db.selectIdentityAsync('Table1', 'id');
+            expect(id).toBe(1);
+            await db.executeAsync(new QueryExpression().insert({
+                id: id,
+                name: 'Test Name',
+                description: 'Test Description'
+            }).into('Table1'));
+            id = await db.selectIdentityAsync('Table1', 'id');
+            expect(id).toBe(2);
+            await db.executeAsync(new QueryExpression().insert({
+                id: id,
+                name: 'New Test Name',
+                description: 'New Test Description'
+            }).into('Table1'));
+
+        });
+    });
+
 });

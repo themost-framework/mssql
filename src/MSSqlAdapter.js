@@ -511,71 +511,40 @@ class MSSqlAdapter {
      * @param callback {Function}
      */
     selectIdentity(entity, attribute, callback) {
-        // validate current connection transaction
-        const inTransaction = (this.transaction != null);
         // create a dedicated connection or use current connection if transaction is empty
-        const db = inTransaction ? new MSSqlAdapter(this.options) : this;
-        // create migration schema
-        const migration = {
-            'appliesTo': 'increment_id',
-            'model': 'increments',
-            'version': '1.0',
-            'description': 'Increments migration (version 1.0)',
-            'add': [
-                { 'name': 'id', 'type': 'Counter', 'primary': true },
-                { 'name': 'entity', 'type': 'Text', 'size': 120 },
-                { 'name': 'attribute', 'type': 'Text', 'size': 120 },
-                { 'name': 'value', 'type': 'Integer' }
-            ]
-        };
-        //ensure increments entity
-        db.migrate(migration, (err) => {
-            //throw error if any
-            if (err) {
-                if (inTransaction === false) {
-                    return callback(err);
-                }
-                // close dedicated connection
-                return db.close(() => {
-                    // and return error
-                    return callback(err);
-                });
-            }
-            // prepare
-            const sql = `IF NOT EXISTS(SELECT * FROM [increment_id] WHERE [entity]='${entity}' AND [attribute] = '${attribute}')
-                INSERT INTO [increment_id]([entity], [attribute], [value]) VALUES ('${entity}', '${attribute}', (SELECT ISNULL(MAX([${attribute}]), 0) 
-                FROM [${entity}]));
-                DECLARE @t TABLE (value int);
-                UPDATE  [increment_id] SET [value] = [value] + 1 OUTPUT [inserted].[value] INTO @t WHERE [entity]='${entity}' AND attribute = '${attribute}';SELECT * FROM @t`;
-            // execute
-            return db.execute(sql, null, (err, result) => {
-                if (inTransaction === false) {
-                    if (err) {
-                        return callback(err);
-                    }
+        const db = this;
+        const sequenceName = `${entity}_${attribute}_seq`;
+        /**
+         * @type {MSSqlFormatter}
+         */
+        const formatter = db.getFormatter();
+        const nextValueSql = `SELECT NEXT VALUE FOR ${formatter.escapeName(sequenceName)} AS [value];`;
+        // get max value for the given entity and attribute if sequence does not exist
+        return db.executeAsync(`
+IF NOT EXISTS (SELECT * FROM [sysobjects] WHERE [name] = ${formatter.escape(sequenceName)} AND [type] = 'SO')
+    SELECT ISNULL(MAX(${formatter.escapeName(attribute)}), 1) AS [value] FROM ${formatter.escapeName(entity)};`, null).then((results) => {
+            // if sequence exists then get next value without trying to create sequence
+            // because it has been already created (in that case, results will be empty)
+            if (results && results.length === 0) {
+                return db.executeAsync(nextValueSql, null).then(([result]) => {
                     // return result[0]
-                    return callback(null, result[0].value);
-                }
-                // close dedicated connection
-                return db.close(() => {
-                    if (err) {
-                        return callback(err);
-                    }
-                    // and return result[0]
-                    return callback(null, result[0].value);
+                    return callback(null, parseInt(result.value, 10));
                 });
-            });
-        }, (error) => {
-            if (inTransaction === false) {
-                return callback(error);
             }
-            // close dedicated connection
-            return db.close(() => {
-                // and return error
-                return callback(error);
+            const startValue = (results && results.length > 0) ? results[0].value : 1;
+            // create sequence if it does not exist
+                    return db.executeAsync(`
+IF NOT EXISTS (SELECT * FROM [sysobjects] WHERE [name] = ${formatter.escape(sequenceName)} AND [type] = 'SO')
+    CREATE SEQUENCE ${formatter.escapeName(sequenceName)} START WITH ${startValue} INCREMENT BY 1;`, null).then(() => {
+                        // get next value for sequence
+                        return db.executeAsync(nextValueSql, null).then(([result]) => {
+                            // return result[0]
+                            return callback(null, parseInt(result.value, 10));
+                        });
+                    });
+            }).catch((err) => {
+                return callback(err);
             });
-        });
-
     }
 
     /**
@@ -1732,6 +1701,10 @@ class MSSqlAdapter {
 
     finalizeConnectionPoolAsync() {
         return new MSSqlConnectionPoolManager().finalizeAsync();
+    }
+
+    getFormatter() {
+        return new MSSqlFormatter();
     }
 
 }
