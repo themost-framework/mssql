@@ -389,4 +389,38 @@ describe('MSSqlAdapter', () => {
         });
     });
 
+    it('should use custom identify of a missing column', async () => {
+        await app.executeInTestTranscaction(async (context) => {
+            const db = context.db;
+            let exists = await db.table('Table2').existsAsync();
+            expect(exists).toBeFalsy();
+            await db.table('Table2').createAsync([
+                {
+                    name: 'id',
+                    type: 'Integer',
+                    primary: true,
+                    nullable: false
+                },
+                {
+                    name: 'name',
+                    type: 'Text',
+                    size: 255,
+                    nullable: false
+                }
+            ]);
+            exists = await db.table('Table2').existsAsync();
+            expect(exists).toBeTruthy();
+
+            // insert a row
+            let id = await db.selectIdentityAsync('Table2', 'index');
+            expect(id).toBe(2);
+            await db.executeAsync(new QueryExpression().insert({
+                id: id,
+                name: 'Test Name'
+            }).into('Table2'));
+            
+
+        });
+    });
+
 });
