@@ -530,7 +530,7 @@ class MSSqlAdapter {
 IF NOT EXISTS (SELECT * FROM [sysobjects] WHERE [name] = ${formatter.escape(sequenceName)} AND [type] = 'SO')
     IF EXISTS(SELECT [c0].* FROM [syscolumns] AS [c0] INNER JOIN sysobjects s0 ON c0.[id]=s0.[id] AND [s0].[type]='U'
         WHERE [c0].[name]=${formatter.escape(attribute)} AND [s0].name = ${formatter.escape(table)} AND SCHEMA_NAME(s0.[uid]) = ${formatter.escape(schema)})
-    SELECT ISNULL(MAX(${formatter.escapeName(attribute)}), 0) AS [value] FROM ${formatter.escapeName(entity)};`, null).then((results) => {
+    EXEC sp_executesql N'SELECT ISNULL(MAX(${formatter.escapeName(attribute)}), 0) AS [value] FROM ${formatter.escapeName(entity)}'`, null).then((results) => {
             const startValue = (results && results.length > 0) ? results[0].value : 1;
             // create sequence if it does not exist
                     return db.executeAsync(`
