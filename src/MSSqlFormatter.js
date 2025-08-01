@@ -29,6 +29,29 @@ class MSSqlFormatter extends SqlFormatter {
             timezone: (offset <= 0 ? '+' : '-') + zeroPad(-Math.floor(offset / 60), 2) + ':' + zeroPad(offset % 60, 2)
         };
     }
+
+    /**
+     * @private
+     * @param {import('@themost/query').QueryExpression|*} query 
+     */
+    formatLimitSelectWithDistinctClause(query) {
+        const take = parseInt(query.$take, 10) || 0;
+        const skip = parseInt(query.$skip, 10) || 0;
+        let sql = this.formatSelect(query);
+        if (query.$order == null) {
+            const [key] = Object.keys(query.$select);
+            if (key == null) {
+                throw new Error('Select clause is missing');
+            }
+            const firstField = query.$select[key];
+            sql += ' ';
+            sql += `ORDER BY ${this.format(firstField, '%ff')} ASC`;
+        }
+        sql += ' ';
+        sql += `OFFSET ${skip} ROWS FETCH NEXT ${take} ROWS ONLY`;
+        return sql;
+    }
+
     formatLimitSelect(obj) {
         let sql;
         const self = this;
@@ -36,6 +59,9 @@ class MSSqlFormatter extends SqlFormatter {
             sql = self.formatSelect(obj);
         }
         else {
+            if (obj.$distinct) {
+                return self.formatLimitSelectWithDistinctClause(obj);
+            }
             obj.$take = parseInt(obj.$take) || 0;
             obj.$skip = parseInt(obj.$skip) || 0;
             //add row_number with order
