@@ -43,7 +43,10 @@ class MSSqlFormatter extends SqlFormatter {
             if (key == null) {
                 throw new Error('Select clause is missing');
             }
-            const firstField = query.$select[key];
+            const [firstField] = query.$select[key];
+            if (firstField == null) {
+                throw new Error('Select clause seems to be empty');
+            }
             sql += ' ';
             sql += `ORDER BY ${this.format(firstField, '%ff')} ASC`;
         }
