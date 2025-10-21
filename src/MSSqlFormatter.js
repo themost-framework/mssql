@@ -1,6 +1,7 @@
 // MOST Web Framework Codename Zero Gravity Copyright (c) 2017-2022, THEMOST LP All rights reserved
 import { sprintf } from 'sprintf-js';
 import { QueryField, SqlFormatter, QueryExpression } from '@themost/query';
+import { speedOfLightDependencies } from 'mathjs';
 
 function zeroPad(number, length) {
     number = number || 0;
@@ -419,7 +420,7 @@ class MSSqlFormatter extends SqlFormatter {
                 value = current instanceof QueryField ? new QueryField(current[name]) : current[name];
             }
             // escape json attribute name and value
-            previous.push(this.escape(name), this.escape(value));
+            previous.push(name, this.escape(value));
             return previous;
         }, []);
         const pairs = args.reduce((previous, current, index) => {
@@ -429,7 +430,10 @@ class MSSqlFormatter extends SqlFormatter {
             previous.push(`${args[index - 1]}:${current}`);
             return previous;
         }, []);
-        return `json_object(${pairs.join(',')})`;
+        return `(SELECT ${pairs.map((pair) => {
+            const [alias, value] = pair.split(':');
+            return value + ' AS ' + this.escapeName(alias)
+        }).join(',')} FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)`;
     }
 
      /**
