@@ -710,4 +710,39 @@ describe('SqlFormatter', () => {
         expect(item.tags).toEqual([ 'user', 'customer', 'admin' ]);
     });
 
+     it('should parse query expression as json object', async () => {
+        // set context user
+        context.user = {
+            name: 'alexis.rees@example.com'
+        };
+        const { viewAdapter: People  } = context.model('Person');
+        const { viewAdapter: PostalAddresses  } = context.model('PostalAddress');
+        const query = new QueryExpression().select(
+            'id', 'familyName', 'givenName', 'jobTitle', 'email'
+        ).from(People).where('email').equal(context.user.name);
+        query.$select[People].push(
+            new QueryField({
+                address: {
+                    $jsonObject: [
+                        new QueryExpression().select(
+                            new QueryField('streetAddress').from(PostalAddresses),
+                            new QueryField('postalCode').from(PostalAddresses)
+                        ).from(PostalAddresses).where(
+                            new QueryField('id').from(PostalAddresses)
+                        ).equal(
+                            new QueryField('address').from(People)
+                        )
+                    ]
+                }
+            })
+        );
+        const [item] = await context.db.executeAsync(query, []);
+        expect(item).toBeTruthy();
+        expect(item.address).toBeTruthy();
+        const keys = Object.keys(item.address);
+        expect(keys.length).toBe(2);
+        expect(keys).toContain('streetAddress');
+        expect(keys).toContain('postalCode');
+    });
+
 });

@@ -20,7 +20,7 @@ const testConnectionOptions = {
     'options': {
         'encrypt': false,
         'trustServerCertificate': true,
-        'useUTC': true,
+        'useUTC': false,
         'transactionIsolationLevel': 'readCommitted'
     }
 };

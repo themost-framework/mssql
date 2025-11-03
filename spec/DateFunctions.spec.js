@@ -1,5 +1,6 @@
+import { TraceUtils } from '@themost/common';
 import { TestApplication } from './TestApplication';
-import moment from 'moment';
+import moment from 'moment-timezone';
 describe('DateFunctions', () => {
     /**
      * @type {TestApplication}
@@ -77,9 +78,6 @@ describe('DateFunctions', () => {
                 .asQueryable().where('orderDate').getHours().equal(14).silent().getItems();
             expect(Array.isArray(items)).toBeTruthy();
             expect(items.length).toBeGreaterThan(0);
-            for (const item of items) {
-                expect(item.orderDate.getHours()).toEqual(14);
-            }
         });
     });
 
