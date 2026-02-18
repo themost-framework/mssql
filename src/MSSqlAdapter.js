@@ -1366,7 +1366,7 @@ IF NOT EXISTS (SELECT * FROM [sysobjects] WHERE [name] = ${formatter.escape(sequ
                                             //remove column from collection
                                             migration.add.splice(i, 1);
                                             i -= 1;
-                                            if (newType !== oldType) {
+                                            if (newType.replace(/\bn(char|varchar|text)\b/gi, '$1') !== oldType) {
                                                 //add column to alter collection
                                                 migration.change.push(x);
                                             }
