@@ -1147,7 +1147,7 @@ IF NOT EXISTS (SELECT * FROM [sysobjects] WHERE [name] = ${formatter.escape(sequ
                         }
                         try {
                             const formatter = new MSSqlFormatter();
-                            const sql = 'EXECUTE(\'' + sprintf('CREATE VIEW %s.%s AS ', formatter.escapeName(owner), formatter.escapeName(view)) + formatter.format(q) + '\')';
+                            const sql = 'EXECUTE(\'' + sprintf('CREATE VIEW %s.%s AS ', formatter.escapeName(owner), formatter.escapeName(view)) + formatter.format(q).replace(/'/g, '\'\'') + '\')';
                             self.execute(sql, [], tr);
                         }
                         catch (e) {
