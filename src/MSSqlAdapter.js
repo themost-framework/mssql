@@ -10,6 +10,16 @@ import { AsyncSeriesEventEmitter, before, after } from '@themost/events';
 import { Guid } from '@themost/common';
 import merge from 'lodash/merge';
 
+function inlineJsonReviver(key, value) {
+    if (typeof value === 'string' && value.startsWith('{\"')) {
+        try {
+            return JSON.parse(value, inlineJsonReviver);
+        } catch (err) {
+            return value;
+        }
+    }
+    return value;
+}
 /**
  *
  * @param {{target: SqliteAdapter, query: string|QueryExpression, results: Array<*>}} event
@@ -28,7 +38,27 @@ function onReceivingJsonObject(event) {
                 if (typeof key !== 'string') {
                     return false;
                 }
-                return x[key].$jsonObject != null || x[key].$jsonArray != null  || x[key].$jsonGroupArray != null;
+                let isJson = x[key].$jsonObject != null || x[key].$jsonArray != null  || x[key].$jsonGroupArray != null;
+                if (isJson) {
+                    return true;
+                }
+                if (x[key].$query) {
+                    const {$query: query} = x[key];
+                    if (query.$select) {
+                        // get first key of select
+                        const [key] = Object.keys(query.$select);
+                        if (typeof key === 'string') {
+                            const fields = query.$select[key];
+                            if (Array.isArray(fields) && fields.length === 1) {
+                                const field = fields[0];
+                                if (field.value) {
+                                    isJson = field.value.$jsonObject != null || field.value.$jsonArray != null  || field.value.$jsonGroupArray != null;
+                                }
+                            }
+                        }
+                    }
+                }
+                return isJson;
             }).map((x) => {
                 return Object.keys(x)[0];
             });
@@ -37,7 +67,8 @@ function onReceivingJsonObject(event) {
                     for(const result of event.results) {
                         attrs.forEach((attr) => {
                             if (Object.prototype.hasOwnProperty.call(result, attr) && typeof result[attr] === 'string') {
-                                    result[attr] = JSON.parse(result[attr]);
+                                    const str = result[attr];
+                                    result[attr] = JSON.parse(str, inlineJsonReviver);
                             }
                         });
                     }
@@ -520,7 +551,7 @@ class MSSqlAdapter {
         const formatter = db.getFormatter();
         const nextValueSql = `SELECT NEXT VALUE FOR ${formatter.escapeName(sequenceName)} AS [value];`;
         const entityAndSchema = entity.match(new RegExp(ObjectNameValidator.validator.pattern, 'g'));
-        let schema = 'dbo';
+        let schema = this.options.schema || 'dbo';
         let table = entity;
         if (entityAndSchema && entityAndSchema.length > 1) {
             [schema, table] = entityAndSchema.slice(-2);
@@ -852,7 +883,7 @@ IF NOT EXISTS (SELECT * FROM [sysobjects] WHERE [name] = ${formatter.escape(sequ
             //get view name
             table = name;
             //get default owner
-            owner = 'dbo';
+            owner = self.options.schema || 'dbo';
         }
         return {
             /**
@@ -1067,7 +1098,7 @@ IF NOT EXISTS (SELECT * FROM [sysobjects] WHERE [name] = ${formatter.escape(sequ
             //get view name
             view = name;
             //get default owner
-            owner = 'dbo';
+            owner = self.options.schema || 'dbo';
         }
         return {
             /**
