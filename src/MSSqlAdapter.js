@@ -938,8 +938,10 @@ IF NOT EXISTS (SELECT * FROM [sysobjects] WHERE [name] = ${formatter.escape(sequ
              */
             columns: function (callback) {
                 callback = callback || function () { };
-                self.execute('SELECT c0.[name] AS [name], c0.[isnullable] AS [nullable], c0.[length] AS [size], c0.[prec] AS [precision], ' +
-                    'c0.[scale] AS [scale], t0.[name] AS type, t0.[name] + CASE WHEN t0.[variable]=0 THEN \'\' ELSE \'(\' + CONVERT(varchar,c0.[length]) + \')\' END AS [type1], ' +
+                self.execute('SELECT c0.[name] AS [name], c0.[isnullable] AS [nullable], CASE WHEN t0.[name] IN (\'nvarchar\', \'nchar\') THEN c0.[length]/2 ELSE c0.[length] END AS [size], c0.[prec] AS [precision], ' +
+                    'c0.[scale] AS [scale], t0.[name] AS type, t0.[name] + CASE WHEN t0.[variable]=0 THEN \'\' ' +
+                    'WHEN t0.[name] IN (\'nvarchar\', \'nchar\') THEN \'(\' + CASE WHEN c0.length>0 then CONVERT(varchar, c0.[length] / 2) ELSE \'max\' END  + \')\' ' +
+                    'ELSE \'(\' + CONVERT(varchar,c0.[length]) + \')\' END AS [type1], ' +
                     'CASE WHEN p0.[indid]>0 THEN 1 ELSE 0 END [primary] FROM syscolumns c0  INNER JOIN systypes t0 ON c0.[xusertype] = t0.[xusertype] ' +
                     'INNER JOIN  sysobjects s0 ON c0.[id]=s0.[id]  LEFT JOIN (SELECT k0.* FROM sysindexkeys k0 INNER JOIN (SELECT i0.* FROM sysindexes i0 ' +
                     'INNER JOIN sysobjects s0 ON i0.[id]=s0.[id]  WHERE i0.[status]=2066) x0  ON k0.[id]=x0.[id] AND k0.[indid]=x0.[indid] ) p0 ON c0.[id]=p0.[id] ' +
@@ -1389,10 +1391,13 @@ IF NOT EXISTS (SELECT * FROM [sysobjects] WHERE [name] = ${formatter.escape(sequ
                                             newType = self.format('%t', x);
                                             //get old type
                                             oldType = column.type1.replace(/\s+$/, '') + ((column.nullable === true || column.nullable === 1) ? ' null' : ' not null');
+                                            // replace leading n character from nchar, nvarchar and ntext
+                                            // so that migration should not change this column types (prevent data loss)
+                                            oldType  = oldType.replace(/\bn(char|varchar|text)\b/gi, '$1');
                                             //remove column from collection
                                             migration.add.splice(i, 1);
                                             i -= 1;
-                                            if (newType !== oldType) {
+                                            if (newType.replace(/\bn(char|varchar|text)\b/gi, '$1') !== oldType) {
                                                 //add column to alter collection
                                                 migration.change.push(x);
                                             }
