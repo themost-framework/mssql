@@ -474,7 +474,7 @@ class MSSqlFormatter extends SqlFormatter {
         }
         // trear expr as select expression
         if (expr.$select) {
-            return `(${this.format(expr)} FOR JSON PATH)`;
+            return `ISNULL((${this.format(expr)} FOR JSON PATH), JSON_QUERY('[]'))`;
         }
         // treat expression as query field
         if (Object.prototype.hasOwnProperty.call(expr, '$name')) {
