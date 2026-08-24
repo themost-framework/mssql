@@ -17,7 +17,7 @@ describe('ConditionExpression', () => {
     })
     
     it('should use condition in select query', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const query = new QueryExpression().select(
                 'id',
                 'name',
@@ -55,7 +55,7 @@ describe('ConditionExpression', () => {
     });
 
     it('should use switch expression in select query', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const priceDescription = Object.assign(new QueryField(), {
                 priceDescription: {
                     $switch: {
@@ -108,7 +108,7 @@ describe('ConditionExpression', () => {
     });
     
     it('should use condition closure', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const Products = new QueryEntity('ProductData');
             let a = new QueryExpression().select( x => {
                 // noinspection RedundantConditionalExpressionJS
@@ -122,7 +122,7 @@ describe('ConditionExpression', () => {
     });
 
     it('should use condition with sub-conditions closure', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const Products = new QueryEntity('ProductData');
             let a = new QueryExpression().select( x => {
                 // noinspection RedundantConditionalExpressionJS

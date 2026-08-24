@@ -233,6 +233,11 @@ class MSSqlFormatter extends SqlFormatter {
         else
             return sprintf('SUBSTRING(%s,%s,%s)', this.escape(p0), pos.valueOf() + 1, 255);
     }
+
+    $substr(p0, pos, length) {
+        return this.$substring(p0, pos, length);
+    }
+
     /**
      * Implements trim(a) expression formatter.
      * @param p0 {*}
@@ -454,6 +459,10 @@ class MSSqlFormatter extends SqlFormatter {
      * @param {{ $jsonGet: Array<*> }} expr
      */
      $jsonGroupArray(expr) {
+        // noinspection JSUnresolvedReference
+        if (expr && expr.$select) {
+            return this.$jsonArray(expr);
+        }
         const [key] = Object.keys(expr);
         if (key !== '$jsonObject') {
             throw new Error('Invalid json group array expression. Expected a json object expression');
