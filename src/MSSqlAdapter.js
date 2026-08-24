@@ -29,6 +29,7 @@ function onReceivingJsonObject(event) {
         // try to identify the usage of a $jsonObject dialect and format result as JSON
         const { $select: select } = event.query;
         if (select) {
+            const jsonGroupArraysAttrs = [];
             const attrs = Object.keys(select).reduce((previous, current) => {
                 const fields = select[current];
                 previous.push(...fields);
@@ -40,6 +41,19 @@ function onReceivingJsonObject(event) {
                 }
                 let isJson = x[key].$jsonObject != null || x[key].$jsonArray != null  || x[key].$jsonGroupArray != null;
                 if (isJson) {
+                    if (x[key].$jsonGroupArray != null) {
+                        const [expr] = x[key].$jsonGroupArray;
+                        // if the expression is a select statement then add the attribute to jsonGroupArraysAttrs
+                        // in order to follow a different parsing strategy for the result set
+                        // where the result set is grouped by the attribute value is an array of objects
+                        // important note: this operation is very important because
+                        // JSON_ARRAYAGG is not supported in MSSQL prior to 2025
+                        // and we need to parse the result set as an array of values instead of an array of objects
+                        // e.g. [ 'Producr 1', 'Product 2' ] instead of [ { name: 'Product 1' }, { name: 'Product 2' } ]
+                        if (expr && expr.$select) {
+                            jsonGroupArraysAttrs.push(key);    
+                        }
+                    }
                     return true;
                 }
                 if (x[key].$query) {
@@ -68,7 +82,17 @@ function onReceivingJsonObject(event) {
                         attrs.forEach((attr) => {
                             if (Object.prototype.hasOwnProperty.call(result, attr) && typeof result[attr] === 'string') {
                                     const str = result[attr];
-                                    result[attr] = JSON.parse(str, inlineJsonReviver);
+                                    if (jsonGroupArraysAttrs.indexOf(attr) >= 0) {
+                                        // if the attribute is a jsonGroupArray then parse the result as an array of objects
+                                        // and then map the result to an array of primitive values by extracting the first key of each object
+                                        const arr = JSON.parse(str, inlineJsonReviver).map((x) => {
+                                            const [key] = Object.keys(x);
+                                            return x[key];
+                                        });
+                                        result[attr] = arr;
+                                    } else {
+                                        result[attr] = JSON.parse(str, inlineJsonReviver);
+                                    }
                             }
                         });
                     }

@@ -23,7 +23,7 @@ describe('MSSqlFormatter', () => {
     });
 
     it('should get data', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const items = await context.model('ActionStatusType').silent().getItems();
             expect(Array.isArray(items)).toBeTruthy();
             expect(items.length).toBeTruthy();
@@ -31,7 +31,7 @@ describe('MSSqlFormatter', () => {
     });
 
     it('should query data', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const item = await context.model('ActionStatusType')
                 .where('alternateName').equal('ActiveActionStatus').silent().getItem();
             expect(item).toBeTruthy();
@@ -65,7 +65,7 @@ describe('MSSqlFormatter', () => {
     });
 
     it('should use insert', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const insertUser = {
                 name: 'user1@example.com',
                 description: 'Test User',
@@ -83,7 +83,7 @@ describe('MSSqlFormatter', () => {
     });
 
     it('should use delete', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const insertUser = {
                 name: 'user1@example.com',
                 description: 'Test User'
@@ -97,7 +97,7 @@ describe('MSSqlFormatter', () => {
     });
 
     it('should use count', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
 
             await context.model('User').silent().save({
                 name: 'admin1@example.com',

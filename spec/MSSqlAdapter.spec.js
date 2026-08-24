@@ -21,7 +21,7 @@ describe('MSSqlAdapter', () => {
         //
     });
     it('should check database', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             let exists = await context.db.database('a_test_database').existsAsync();
             expect(exists).toBeFalsy();
             exists = await context.db.database('test_db').existsAsync();
@@ -30,14 +30,14 @@ describe('MSSqlAdapter', () => {
     });
 
     it('should check table', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const exists = await context.db.table('Table1').existsAsync();
             expect(exists).toBeFalsy();
         });
     });
 
     it('should get tables', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const tables = await context.db.tables().listAsync();
             expect(Array.isArray(tables)).toBeTruthy();
             expect(tables.length).toBeGreaterThan(0);
@@ -47,7 +47,7 @@ describe('MSSqlAdapter', () => {
     });
 
     it('should get views', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const views = await context.db.views().listAsync();
             expect(Array.isArray(views)).toBeTruthy();
             expect(views.length).toBeGreaterThan(0);
@@ -57,7 +57,7 @@ describe('MSSqlAdapter', () => {
     });
 
     it('should create table', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const db = context.db;
             let exists = await db.table('Table1').existsAsync();
             expect(exists).toBeFalsy();
@@ -98,7 +98,7 @@ describe('MSSqlAdapter', () => {
     });
 
     it('should alter table', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const db = context.db;
             let exists = await db.table('Table2').existsAsync();
             expect(exists).toBeFalsy();
@@ -152,7 +152,7 @@ describe('MSSqlAdapter', () => {
 
     it('should create view', async () => {
 
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const db = context.db;
             let exists = await db.table('Table1').existsAsync();
             expect(exists).toBeFalsy();
@@ -197,7 +197,7 @@ describe('MSSqlAdapter', () => {
     });
 
     it('should create index', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const db = context.db;
             let exists = await db.table('Table1').existsAsync();
             expect(exists).toBeFalsy();
@@ -249,7 +249,7 @@ describe('MSSqlAdapter', () => {
     });
 
     it('should retry a wrong query string', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const db = context.db;
             let exists = await db.table('Table1').existsAsync();
             expect(exists).toBeFalsy();
@@ -293,7 +293,7 @@ describe('MSSqlAdapter', () => {
     });
 
     it('should select identity multiple times', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const db = context.db;
             let exists = await db.table('Table1').existsAsync();
             expect(exists).toBeFalsy();
@@ -346,7 +346,7 @@ describe('MSSqlAdapter', () => {
     });
 
     it('should custom identity multiple times', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const db = context.db;
             let exists = await db.table('Table2').existsAsync();
             expect(exists).toBeFalsy();
@@ -390,7 +390,7 @@ describe('MSSqlAdapter', () => {
     });
 
     it('should use custom identify of a missing column', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const db = context.db;
             let exists = await db.table('Table2').existsAsync();
             expect(exists).toBeFalsy();

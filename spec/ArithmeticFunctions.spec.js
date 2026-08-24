@@ -23,7 +23,7 @@ describe('ArithmeticFunctions', () => {
 
     
     it('should use add()', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             let items = await context.model('Product')
                 .asQueryable().where('price').add(10.5).greaterThan(100).take(10).getItems();
             expect(Array.isArray(items)).toBeTruthy();
@@ -34,7 +34,7 @@ describe('ArithmeticFunctions', () => {
     });
 
     it('should use subtract()', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             let items = await context.model('Product')
                 .asQueryable().where('price').subtract(10.5).lowerThan(100).take(10).getItems();
             expect(Array.isArray(items)).toBeTruthy();
@@ -45,7 +45,7 @@ describe('ArithmeticFunctions', () => {
     });
 
     it('should use multiply()', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             let items = await context.model('Product')
                 .asQueryable()
                 .where('category').equal('Laptops')
@@ -60,7 +60,7 @@ describe('ArithmeticFunctions', () => {
     });
 
     it('should use divide()', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             let items = await context.model('Product')
                 .asQueryable()
                 .where('category').equal('Laptops')
@@ -75,7 +75,7 @@ describe('ArithmeticFunctions', () => {
     });
 
     it('should use ceil()', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             let items = await context.model('Product')
                 .asQueryable()
                 .where('category').equal('Printers')
@@ -90,7 +90,7 @@ describe('ArithmeticFunctions', () => {
     });
 
     it('should use round()', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             let items = await context.model('Product')
                 .asQueryable()
                 .where('category').equal('Printers')
@@ -105,7 +105,7 @@ describe('ArithmeticFunctions', () => {
     });
 
     it('should use floor()', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             let items = await context.model('Product')
                 .asQueryable()
                 .where('category').equal('Printers')

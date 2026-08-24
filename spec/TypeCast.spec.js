@@ -28,7 +28,7 @@ describe('Type Casting', () => {
     });
 
     it('should use uuid()', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const query = new QueryExpression().select(new QueryField({
                 id: {
                     $uuid: []
@@ -42,7 +42,7 @@ describe('Type Casting', () => {
     });
 
     it('should use getDate()', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const query = new QueryExpression().select(new QueryField({
                 currentDate: {
                     $getDate: [
@@ -58,7 +58,7 @@ describe('Type Casting', () => {
     });
 
     it('should use toGuid()', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const query = new QueryExpression().select(new QueryField({
                 id: {
                     $toGuid: [
@@ -74,7 +74,7 @@ describe('Type Casting', () => {
     });
 
     it('should use toGuid() in select statement', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const Products = context.model('Product');
             const { viewAdapter: ProductView } = Products;
             const q = Products.where('category').equal('Laptops');
@@ -115,7 +115,7 @@ describe('Type Casting', () => {
     });
 
     it('should use $toString inside closure', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const Products = new QueryEntity('ProductData');
             const q = new QueryExpression().select(({id, name, price}) => {
                 return {
@@ -135,7 +135,7 @@ describe('Type Casting', () => {
     });
 
     it('should use $toInt inside closure', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const Products = new QueryEntity('ProductData');
             const q = new QueryExpression().select(({id, name, price}) => {
                 return {
@@ -155,7 +155,7 @@ describe('Type Casting', () => {
     });
 
     it('should use $toDouble inside closure', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const Products = new QueryEntity('ProductData');
             const q = new QueryExpression().select(({id, name, price}) => {
                 return {
@@ -174,7 +174,7 @@ describe('Type Casting', () => {
     });
 
     it('should use getDate()', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             const query = new QueryExpression().select(new QueryField({
                 currentDate: {
                     $getDate: [

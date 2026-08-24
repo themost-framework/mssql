@@ -1,4 +1,3 @@
-import { TraceUtils } from '@themost/common';
 import { TestApplication } from './TestApplication';
 import moment from 'moment-timezone';
 describe('DateFunctions', () => {
@@ -23,7 +22,7 @@ describe('DateFunctions', () => {
     });
 
     it('should use getDate()', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             let items = await context.model('Order')
                 .asQueryable().where('orderDate').getDate().equal('2019-04-15').silent().getItems();
             expect(Array.isArray(items)).toBeTruthy();
@@ -37,7 +36,7 @@ describe('DateFunctions', () => {
     });
 
     it('should use getDay()', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             let items = await context.model('Order')
                 .asQueryable().where('orderDate').getDay().equal(15).silent().getItems();
             expect(Array.isArray(items)).toBeTruthy();
@@ -49,7 +48,7 @@ describe('DateFunctions', () => {
     });
 
     it('should use getMonth()', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             let items = await context.model('Order')
                 .asQueryable().where('orderDate').getMonth().equal(4).silent().getItems();
             expect(Array.isArray(items)).toBeTruthy();
@@ -61,9 +60,9 @@ describe('DateFunctions', () => {
     });
 
     it('should use getFullYear()', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             let items = await context.model('Order')
-                .asQueryable().where('orderDate').getFullYear().equal(2019).silent().getItems();
+                .asQueryable().where('orderDate').getFullYear().equal(2019).silent().take(5).getItems();
             expect(Array.isArray(items)).toBeTruthy();
             expect(items.length).toBeGreaterThan(0);
             for (const item of items) {
@@ -73,7 +72,7 @@ describe('DateFunctions', () => {
     });
 
     it('should use getHours()', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             let items = await context.model('Order')
                 .asQueryable().where('orderDate').getHours().equal(14).silent().getItems();
             expect(Array.isArray(items)).toBeTruthy();
@@ -82,7 +81,7 @@ describe('DateFunctions', () => {
     });
 
     it('should use getMinutes()', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             let items = await context.model('Order')
                 .asQueryable().where('orderDate').getMinutes().equal(45).silent().getItems();
             expect(Array.isArray(items)).toBeTruthy();
@@ -94,7 +93,7 @@ describe('DateFunctions', () => {
     });
 
     it('should use getSeconds()', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             let items = await context.model('Order')
                 .asQueryable().where('orderDate').getSeconds().equal(42).silent().getItems();
             expect(Array.isArray(items)).toBeTruthy();
@@ -106,7 +105,7 @@ describe('DateFunctions', () => {
     });
 
     it('should use datetimeoffset', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             let user = await context.model('User').where('name').equal('alexis.rees@example.com')
                 .silent().getItem();
             expect(user).toBeTruthy();
@@ -120,7 +119,7 @@ describe('DateFunctions', () => {
     });
 
     it('should use date', async () => {
-        await app.executeInTestTranscaction(async (context) => {
+        await app.executeInTestTransaction(async (context) => {
             // get AMD Radeon R9 290
             let product = await context.model('Product').where('name').equal('AMD Radeon R9 290')
                 .silent().getItem();
