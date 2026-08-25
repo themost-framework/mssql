@@ -54,7 +54,7 @@
     "@rollup/plugin-commonjs": "^22.0.0",
     "@themost/common": "^2.12.3",
     "@themost/data": "^2.24.0",
-    "@themost/json-logger": "^1.1.0",
+    "@themost/json-logger": "^1.3.0",
     "@themost/query": "^2.14.14",
     "@themost/sqlite": "^3.11.1",
     "@themost/xml": "^2.5.2",

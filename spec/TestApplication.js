@@ -11,6 +11,7 @@ const testConnectionOptions = {
     'port': parseInt(process.env.DB_PORT, 10),
     'user': process.env.DB_USER,
     'database': 'test_db',
+    'logLevel': 'debug',
     'timezone': 'Europe/Athens',
      'pool': {
         'max': 25,
@@ -122,8 +123,8 @@ class TestApplication extends DataApplication {
              */
             const pool = context.db.getConnectionPool();
             if (pool) {
-                TraceUtils.log('Analyzing connection pool');
-                TraceUtils.log(JSON.stringify({
+                context.db.logger.debug('Analyzing connection pool');
+                context.db.logger.debug(JSON.stringify({
                     available: pool.available,
                     borrowed: pool.borrowed,
                     size: pool.size
