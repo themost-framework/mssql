@@ -1,6 +1,7 @@
 import { DataAdapterBase, DataAdapterBaseHelper, DataAdapterDatabase, DataAdapterIndexes, DataAdapterMigration, DataAdapterTable, DataAdapterView } from '@themost/common';
 import { QueryExpression, SqlFormatter } from '@themost/query';
 import { ConnectionPool } from 'mssql';
+import { TraceLogger } from '@themost/common';
 
 export declare class MSSqlConnectionPoolManager {
     pools: Map<string, ConnectionPool>;
@@ -29,6 +30,7 @@ declare class RetryQuery {
 export declare class MSSqlAdapter implements DataAdapterBase, DataAdapterBaseHelper {
     static formatType(field: any): string;
     constructor(options?: any);
+    logger: TraceLogger;
     rawConnection?: any;
     options?: any;
     disposed?: boolean;
