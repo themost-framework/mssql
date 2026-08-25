@@ -67,11 +67,24 @@ class TestApplication extends DataApplication {
         // add adapter type
         const name = 'MSSQL Data Adapter';
         const invariantName = 'mssql';
-        dataConfiguration.adapterTypes.set(invariantName, {
-            name,
-            invariantName,
-            createInstance
-        });
+        if (dataConfiguration.adapterTypes instanceof Map) {
+            dataConfiguration.adapterTypes.set(invariantName, {
+                name,
+                invariantName,
+                createInstance
+            });
+        } else {
+            Object.defineProperty(dataConfiguration.adapterTypes, invariantName, {
+                configurable: true,
+                enumerable: true,
+                writable: true,
+                value: {
+                    name,
+                    invariantName,
+                    createInstance
+                }
+            });
+        }
         dataConfiguration.adapters.push({
             name: 'master',
             invariantName: 'mssql',
